@@ -2,6 +2,7 @@ module Eff.Tests where
 
 open import Eff.Prelude
 open import Eff.Zip
+open import Eff.Membership
 open import Eff.Core
 
 data Reader {α} (A : Set α) : Set α -> Set where

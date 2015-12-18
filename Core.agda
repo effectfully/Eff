@@ -2,6 +2,7 @@ module Eff.Core where
 
 open import Eff.Prelude
 open import Eff.Zip
+open import Eff.Membership
 
 infixl 1 _>>=_
 infixr 2 _>>_
@@ -22,11 +23,15 @@ Eff⁻ : ∀ {m n γ} {αs βs : Level ^ n}
 Eff⁻ {0}     Fs C  tt      = C
 Eff⁻ {suc m} Fs C (i , is) = ∃ λ A -> lookupᶻ i Fs A × (A -> Eff⁻ Fs C is)
 
-record Eff {m n γ} {αs βs : Level ^ n} (Fs : Effects αs βs) (C : Set γ)
-           (is : Fin n ^ m) : Set (effˡ αs βs γ is) where
-  constructor wrap
-  field unwrap : Eff⁻ Fs C is
-open Eff
+-- record Eff {m n γ} {αs βs : Level ^ n} (Fs : Effects αs βs) (C : Set γ)
+--            (is : Fin n ^ m) : Set (effˡ αs βs γ is) where
+--   constructor wrap
+--   field unwrap : Eff⁻ Fs C is
+-- open Eff
+
+Eff : ∀ {m n γ} {αs βs : Level ^ n}
+    -> Effects αs βs -> Set γ -> (is : Fin n ^ m) -> Set (effˡ αs βs γ is)
+Eff Fs C = Wrap₂ (λ Fs -> Eff⁻ Fs C) Fs
 
 return : ∀ {n γ} {αs βs : Level ^ n} {Fs : Effects αs βs} {C : Set γ} -> C -> Eff Fs C tt
 return = wrap

@@ -3,7 +3,6 @@ module Eff.Zip where
 open import Eff.Prelude
 
 infixl 6 _^_
-infix  3 _∈_
 
 _^_ : ∀ {α} -> Set α -> ℕ -> Set α
 A ^ 0     = ⊤
@@ -91,16 +90,3 @@ replaceᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
          -> (i : Fin n) -> C x y -> Zip C xs ys -> Zip C (replace i x xs) (replace i y ys)
 replaceᶻ  zero   w (z , zs) = w , zs
 replaceᶻ (suc i) w (z , zs) = z , replaceᶻ i w zs
-
-_∈_ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
-        {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n} {x y}
-    -> C x y -> Zip C xs ys -> Set
-y ∈ ys = Unionʰ (homo (mapᶻ (y ≅_) ys))
-
-∈→Fin : ∀ n {α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
-          {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n}
-          {x y} {z : C x y} {zs : Zip C xs ys}
-      -> z ∈ zs -> Fin n
-∈→Fin  0      ()
-∈→Fin (suc n) (inj₁ r) = zero
-∈→Fin (suc n) (inj₂ p) = suc (∈→Fin n p)
