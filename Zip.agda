@@ -11,14 +11,14 @@ A ^ suc n = A × A ^ n
 
 foldr : ∀ {n α β} {A : Set α}
       -> (B : ℕ -> Set β) -> (∀ {n} -> A -> B n -> B (suc n)) -> B 0 -> A ^ n -> B n
-foldr {0}     B f z  _       = z
+foldr {0}     B f z  tt      = z
 foldr {suc n} B f z (x , xs) = f x (foldr B f z xs)
 
 head : ∀ {n α} {A : Set α} -> A ^ suc n -> A
 head (x , xs) = x
 
 map : ∀ {n α β} {A : Set α} {B : Set β} -> (A -> B) -> A ^ n -> B ^ n
-map f = foldr (_ ^_) (_,_ ∘ f) _
+map f = foldr (_ ^_) (_,_ ∘ f) tt
 
 _++_ : ∀ {n m α} {A : Set α} -> A ^ n -> A ^ m -> A ^ (n + m)
 xs ++ ys = foldr (λ n -> _ ^ (n + _)) _,_ ys xs
@@ -33,7 +33,7 @@ replace (suc i) y (x , xs) = x , replace i y xs
 
 zipWith : ∀ {n α β γ} {A : Set α} {B : Set β} {C : Set γ}
         -> (A -> B -> C) -> A ^ n -> B ^ n -> C ^ n
-zipWith {0}     f  _        _       = _
+zipWith {0}     f  tt       tt      = tt
 zipWith {suc n} f (x , xs) (y , ys) = f x y , zipWith f xs ys
 
 _⊔ⁿ_ : ∀ {n} -> Level ^ n -> Level -> Level
@@ -57,22 +57,22 @@ Setₖₛ k xs ys = Setₛ (zipWith k xs ys)
 
 Zip : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
     -> (∀ x y -> Set (k x y)) -> (xs : A ^ n) -> (ys : B ^ n) -> Setₖₛ k xs ys
-Zip {0}     C  _        _       = ⊤
+Zip {0}     C  tt       tt      = ⊤
 Zip {suc n} C (x , xs) (y , ys) = C x y × Zip C xs ys
 
 foldrᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level} {C : ∀ x y -> Set (k x y)}
            {kₛ : ∀ {n} -> A ^ n -> B ^ n -> Level} {xs : A ^ n} {ys : B ^ n}
        -> (D : ∀ {n} -> (xs : A ^ n) -> (ys : B ^ n) -> Set (kₛ xs ys))
        -> (∀ {n x y} {xs : A ^ n} {ys : B ^ n} -> C x y -> D xs ys -> D (x , xs) (y , ys))
-       -> D {0} _ _
+       -> D tt tt
        -> Zip C xs ys
        -> D xs ys
-foldrᶻ {0}     B f w  _       = w
+foldrᶻ {0}     B f w  tt      = w
 foldrᶻ {suc n} B f w (z , zs) = f z (foldrᶻ B f w zs)
 
 homo : ∀ {n α β γ} {A : Set α} {B : Set β} {C : Set γ} {xs : A ^ n} {ys : B ^ n}
      -> Zip (λ _ _ -> C) xs ys -> C ^ n
-homo {C = C} = foldrᶻ (λ {n} _ _ -> C ^ n) _,_ _
+homo {C = C} = foldrᶻ (λ {n} _ _ -> C ^ n) _,_ tt
 
 mapᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k₀ k₁ : A -> B -> Level}
          {C : ∀ x y -> Set (k₀ x y)} {D : ∀ x y -> Set (k₁ x y)}
@@ -101,6 +101,6 @@ y ∈ ys = Unionʰ (homo (mapᶻ (y ≅_) ys))
           {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n}
           {x y} {z : C x y} {zs : Zip C xs ys}
       -> z ∈ zs -> Fin n
-∈→Fin  0       ()
+∈→Fin  0      ()
 ∈→Fin (suc n) (inj₁ r) = zero
 ∈→Fin (suc n) (inj₂ p) = suc (∈→Fin n p)

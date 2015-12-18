@@ -14,7 +14,7 @@ runReader : ∀ {α} {A B : Set α} -> A -> Reader A B -> B
 runReader x get = x
 
 runWriter : ∀ {α} {A : Set α} {B : Set} -> Writer A B -> B × A
-runWriter (put x) = _ , x
+runWriter (put x) = tt , x
 
 ask : ∀ {n α} {αs βs : Level ^ n} {A : Set α}
         {Fs : Effects αs βs} {{p : Reader A ∈ Fs}}
