@@ -28,8 +28,8 @@ lookup  zero   (x , xs) = x
 lookup (suc i) (x , xs) = lookup i xs
 
 replace : ∀ {n α} {A : Set α} -> Fin n -> A -> A ^ n -> A ^ n
-replace  zero   x (y , xs) = x , xs
-replace (suc i) x (y , xs) = y , replace i x xs
+replace  zero   y (x , xs) = y , xs
+replace (suc i) y (x , xs) = x , replace i y xs
 
 zipWith : ∀ {n α β γ} {A : Set α} {B : Set β} {C : Set γ}
         -> (A -> B -> C) -> A ^ n -> B ^ n -> C ^ n
@@ -86,6 +86,12 @@ lookupᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
 lookupᶻ  zero   (z , zs) = z
 lookupᶻ (suc i) (z , zs) = lookupᶻ i zs
 
+replaceᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
+             {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n} {x y}
+         -> (i : Fin n) -> C x y -> Zip C xs ys -> Zip C (replace i x xs) (replace i y ys)
+replaceᶻ  zero   w (z , zs) = w , zs
+replaceᶻ (suc i) w (z , zs) = z , replaceᶻ i w zs
+
 _∈_ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
         {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n} {x y}
     -> C x y -> Zip C xs ys -> Set
@@ -98,19 +104,3 @@ y ∈ ys = Unionʰ (homo (mapᶻ (y ≅_) ys))
 ∈→Fin  0       ()
 ∈→Fin (suc n) (inj₁ r) = zero
 ∈→Fin (suc n) (inj₂ p) = suc (∈→Fin n p)
-
-
-
-
-
-
--- -- -- replaceᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n} {x}
--- -- --          -> (i : Fin n) -> B x -> Map B xs -> Map B (replace i x xs)
--- -- -- replaceᵐ  zero   y (z , ys) = y , ys
--- -- -- replaceᵐ (suc i) y (z , ys) = z , replaceᵐ i y ys
-
--- -- -- Sets : ∀ {n} -> (αs : Level ^ n) -> Set _
--- -- -- Sets = Map (λ α -> Set α)
-
--- -- -- Union : ∀ {n} {αs : Level ^ n} -> Sets αs -> Set _
--- -- -- Union = foldrᵐ Setₛ _⊎_ ⊥

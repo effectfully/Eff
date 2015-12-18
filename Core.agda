@@ -47,7 +47,7 @@ _>>=_ {is = is} c h = wrap (bind is (unwrap c) (unwrap ∘ h))
 
 _>>_ : ∀ {m p n γ δ} {αs βs : Level ^ n} {Fs : Effects αs βs}
          {C : Set γ} {D : Set δ} {is : Fin n ^ m} {js : Fin n ^ p}
-      -> Eff Fs C is -> Eff Fs D js -> Eff Fs D (is ++ js)
+     -> Eff Fs C is -> Eff Fs D js -> Eff Fs D (is ++ js)
 c >> d = c >>= const d
 
 -- Just don't want to prove (n + 0 ≡ 0).
