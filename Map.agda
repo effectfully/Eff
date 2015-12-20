@@ -3,6 +3,7 @@ module Eff.Map where
 open import Eff.Prelude
 
 infixl 6 _^_
+infix  3 _∈_
 
 _^_ : ∀ {α} -> Set α -> ℕ -> Set α
 A ^ 0     = ⊤
@@ -90,6 +91,16 @@ replaceᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {
 replaceᵐ  zero   y (z , ys) = y , ys
 replaceᵐ (suc i) y (z , ys) = z , replaceᵐ i y ys
 
+_∈_ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n} {x}
+    -> B x -> Map B xs -> Set
+y ∈ ys = Union (homo (mapᵐ (y ≅_) ys))
+
+∈→Fin : ∀ n {α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)}
+          {xs : A ^ n} {ys : Map B xs} {x} {y : B x}
+      -> y ∈ ys -> Fin n
+∈→Fin  0      ()
+∈→Fin (suc n) (inj₁ r) = zero
+∈→Fin (suc n) (inj₂ p) = suc (∈→Fin n p)
 
 -- Tele : ∀ {n} -> (αs : Level ^ n) -> Setₖₛ lsuc αs
 -- Tele {0}      tt      = ⊤

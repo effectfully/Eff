@@ -2,7 +2,6 @@ module Eff.Core where
 
 open import Eff.Prelude
 open import Eff.Map
-open import Eff.Membership
 
 infixl 1 _>>=_
 infixr 2 _>>_
