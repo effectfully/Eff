@@ -3,6 +3,7 @@ module Eff.Tests where
 open import Eff.Prelude
 open import Eff.Map
 open import Eff.Core
+open import Eff.Dep
 
 data Reader {α} (A : Set α) : Set α -> Set where
   Get : Reader A A
@@ -45,33 +46,22 @@ eff₁ = ask >>= λ n -> tell (Fin n) >> tell (Fin (suc n)) >> return n
 test₁ : List Set × ℕ
 test₁ = runEff $ execReader 3 $ execWriter eff₁
 
-data _>>=ᵀ_ {m n γ δ} {αβs : Levels n} {Fs : Effects αβs} {C : Set γ} {is : Fin n ^ m}
-            (c : Eff Fs C is) (D : C -> Set δ) : Set (γ ⊔ δ) where
-  call : (∀ z -> D z) -> c >>=ᵀ D
-
-execᵗ : ∀ {m n γ δ} {αβs : Levels n} {Fs : Effects αβs} {C : Set γ}
-          {is : Fin n ^ m} {c : Eff Fs C is} {D : C -> Set δ}
-      -> (run : Eff Fs C is -> C) -> c >>=ᵀ D -> D (run c)
-execᵗ run (call h) = h _
-
-fmapᵗ : ∀ {m n γ δ ε} {αβs : Levels n} {Fs : Effects αβs} {C : Set γ}
-          {is : Fin n ^ m} {c : Eff Fs C is} {D : C -> Set δ} {E : C -> Set ε}
-      -> (∀ {z} -> D z -> E z) -> c >>=ᵀ D -> c >>=ᵀ E
-fmapᵗ h₂ (call h₁) = call (h₂ ∘ h₁)
-
 open import Data.Fin
 
 -- tell {{inj₁ hrefl}} (fromℕ n) >> return 0
 effₜ : ask {Fs = Reader ℕ , tt} >>=ᵀ λ n -> Eff (Writer (Fin (suc n)) , tt) ℕ (zero , tt)
 effₜ = call λ n -> invokeᵢ zero (Put (fromℕ n)) >> return 2
 
+effₜ′ : ⟨ Reader ℕ , tt ⟩ λ n -> Eff (Writer (Fin (suc n)) , tt) ℕ (zero , tt)
+effₜ′ = ask >>=ᵗ λ n -> invokeᵢ zero (Put (fromℕ n)) >> return 2
+
 -- zero ∷ suc (suc (suc (suc zero))) ∷ [] , 2
 test₂ : List (Fin 5) × ℕ
 test₂ = runEff
       $ execWriter
       $ execᵗ (runEff ∘ execReader 4)
-      $ fmapᵗ (λ e -> invokeᵢ zero (Put zero) >> e) effₜ
+      $ (λ e -> invokeᵢ zero (Put zero) >> e) <$>ᵗ effₜ
 
 -- suc (suc (suc (suc zero))) ∷ [] , 2
 test₃ : List (Fin 5) × ℕ
-test₃ = runEff $ execᵗ (runEff ∘ execReader 4) $ fmapᵗ execWriter effₜ
+test₃ = runEff $ execᵗ (runEff ∘ execReader 4) $ execWriter <$>ᵗ effₜ
