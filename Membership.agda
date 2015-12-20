@@ -1,19 +1,17 @@
 module Eff.Membership where
 
 open import Eff.Prelude
-open import Eff.Zip
+open import Eff.Map
 
 infix 3 _∈_
 
-_∈_ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
-        {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n} {x y}
-    -> C x y -> Zip C xs ys -> Set
-y ∈ ys = Unionʰ (homo (mapᶻ (y ≅_) ys))
+_∈_ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n} {x}
+    -> B x -> Map B xs -> Set
+y ∈ ys = Union (homo (mapᵐ (y ≅_) ys))
 
-∈→Fin : ∀ n {α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
-          {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n}
-          {x y} {z : C x y} {zs : Zip C xs ys}
-      -> z ∈ zs -> Fin n
+∈→Fin : ∀ n {α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)}
+          {xs : A ^ n} {ys : Map B xs} {x} {y : B x}
+      -> y ∈ ys -> Fin n
 ∈→Fin  0      ()
 ∈→Fin (suc n) (inj₁ r) = zero
 ∈→Fin (suc n) (inj₂ p) = suc (∈→Fin n p)

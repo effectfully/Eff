@@ -49,6 +49,10 @@ third : ∀ {α β γ δ} {A : Set α} {B : A -> Set β}
       -> (∀ {x} {y : B x} -> C y -> D y) -> (∃ λ x -> Σ (B x) C) -> ∃ λ x -> Σ (B x) D
 third h (x , y , z) = x , y , h z
 
+uncurryᵏ : ∀ {α β} {A : Set α} {B : A -> Set β} {k : Σ A B -> Level} {C : ∀ p -> Set (k p)}
+         -> (∀ x -> (y : B x) -> C (x , y)) -> (p : Σ A B) -> C p
+uncurryᵏ f (x , y) = f x y
+
 record Wrap {α} {A : Set α} {k : A -> Level} (B : ∀ x -> Set (k x)) (x : A) : Set (k x) where
   constructor wrap
   field unwrap : B x
@@ -56,7 +60,12 @@ open Wrap public
 
 Wrap₂ : ∀ {α β} {A : Set α} {B : A -> Set β} {k : ∀ {x} -> B x -> Level}
       -> (∀ x -> (y : B x) -> Set (k y)) -> ∀ x -> (y : B x) -> Set (k y)
-Wrap₂ C x y = Wrap (λ{ (x , y) -> C x y }) (x , y)
+Wrap₂ C x y = Wrap (uncurryᵏ C) (x , y)
+
+Wrap₃ : ∀ {α β γ} {A : Set α} {B : A -> Set β} {C : ∀ {x} -> B x -> Set γ}
+          {k : ∀ {x} {y : B x} -> (z : C y) -> Level} 
+      -> (∀ x -> (y : B x) -> (z : C y) -> Set (k z)) -> ∀ x -> (y : B x) -> (z : C y) -> Set (k z)
+Wrap₃ D x y z = Wrap₂ (λ z -> uncurryᵏ (D z)) x (y , z)
 
 module _ where
   open import Relation.Binary.PropositionalEquality.TrustMe
