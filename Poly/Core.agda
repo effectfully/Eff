@@ -1,7 +1,7 @@
-module Eff.Core where
+module Core where
 
-open import Eff.Prelude
-open import Eff.Map
+open import Prelude
+open import Map
 
 infixl 1 _>>=_
 infixr 2 _>>_

@@ -1,4 +1,4 @@
-module Eff.Prelude where
+module Prelude where
 
 open import Level renaming (zero to lzero; suc to lsuc) public
 open import Function public

@@ -1,6 +1,6 @@
-module Eff.Map where
+module Map where
 
-open import Eff.Prelude
+open import Prelude
 
 infixl 6 _^_
 infix  3 _∈_
