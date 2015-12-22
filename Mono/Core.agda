@@ -1,9 +1,11 @@
 module Core where
 
-open import Prelude hiding (_>>=_)
+open import Prelude
 
 infixl 2 _>>=_
 infixr 1 _>>_
+infixl 6 _<$>_
+infix  3 _∈_
 
 Effectful : ∀ α ρ ε -> Set (lsuc (α ⊔ ρ ⊔ ε))
 Effectful α ρ ε = (A : Set α) -> (A -> Set ρ) -> Set ε
@@ -14,8 +16,11 @@ Effect ρ α ε = Set ρ -> Effectful α ρ ε
 Effects : ∀ ρ α ε -> ℕ -> Set (lsuc (α ⊔ ρ ⊔ ε))
 Effects ρ α ε = Vec (Effect ρ α ε)
 
+Resource : ∀ ρ -> Set (lsuc ρ)
+Resource ρ = Set ρ
+
 Resources : ∀ ρ -> ℕ -> Set (lsuc ρ)
-Resources ρ = Vec (Set ρ)
+Resources ρ = Vec (Resource ρ)
 
 data Eff {n ρ α ε β} (Ψs : Effects ρ α ε n) (B : Set β) :
        Resources ρ n -> (B -> Resources ρ n) -> Set (β ⊔ lsuc (ρ ⊔ α) ⊔ ε) where
@@ -44,6 +49,30 @@ _<$>_ : ∀ {n ρ α ε β γ} {Ψs : Effects ρ α ε n} {B : Set β}
           {Rs₁ Rs₂ : Resources ρ n} {C : Set γ}
       -> (B -> C) -> Eff Ψs B Rs₁ (const Rs₂) -> Eff Ψs C Rs₁ (const Rs₂)
 g <$> b = b >>= return ∘ g
+
+_∈_ : ∀ {n ρ α ε}
+    -> Effect ρ α ε × Resource ρ -> Effects ρ α ε n × Resources ρ n -> Set (lsuc (α ⊔ ρ ⊔ ε))
+_∈_ {0}     (Φ , S) (Ψs     , Rs)     = ⊥
+_∈_ {suc n} (Φ , S) (Ψ ∷ Ψs , R ∷ Rs) = Φ ≡ Ψ × S ≡ R ⊎ Φ , S ∈ Ψs , Rs 
+
+∈→Fin : ∀ {n ρ α ε} {ΨR : Effect ρ α ε × Resource ρ}
+          {ΨsRs : Effects ρ α ε n × Resources ρ n}
+      -> ΨR ∈ ΨsRs -> Fin n
+∈→Fin {0}                            ()
+∈→Fin {suc n} {ΨsRs = _ ∷ _ , _ ∷ _} (inj₁ _) = zero
+∈→Fin {suc n} {ΨsRs = _ ∷ _ , _ ∷ _} (inj₂ p) = suc (∈→Fin p)
+
+expand : ∀ {n ρ α ε} {Ψ : Effect ρ α ε} {R : Resource ρ} {A : Set α}
+           {R′ : A -> Resource ρ} {Ψs : Effects ρ α ε n} {Rs : Resources ρ n}
+       -> (p : Ψ , R ∈ Ψs , Rs) -> Ψ R A R′ -> lookup (∈→Fin p) Ψs (lookup (∈→Fin p) Rs) A R′
+expand {0}                               ()                   a
+expand {suc n} {Ψs = _ ∷ _} {Rs = _ ∷ _} (inj₁ (refl , refl)) a = a 
+expand {suc n} {Ψs = _ ∷ _} {Rs = _ ∷ _} (inj₂ p)             a = expand p a
+
+invoke : ∀ {n ρ α ε} {Ψ : Effect ρ α ε} {R : Resource ρ} {A : Set α} {R′ : A -> Resource ρ}
+           {Ψs : Effects ρ α ε n} {Rs : Resources ρ n} {{p : Ψ , R ∈ Ψs , Rs}}
+       -> Ψ R A R′ -> Eff Ψs A Rs (λ x -> Rs [ ∈→Fin p ]≔ R′ x)
+invoke {{p}} a = call (∈→Fin p) (expand p a) return
 
 execEff : ∀ {n ρ α ε β γ} {Ψ : Effect ρ α ε} {Ψs : Effects ρ α ε n} {B : Set β}
             {Rs₁ Rs₂ : Resources ρ (suc n)} {C : B -> Set γ}
