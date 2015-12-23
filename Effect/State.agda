@@ -37,7 +37,7 @@ execState⁻ : ∀ {m n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n}
 execState⁻ {0}      tt          s (y , refl)      = (y , s) , refl
 execState⁻ {suc m} (zero  , is) s (, , Get   , f) = execState⁻ is s (f s)
 execState⁻ {suc m} (zero  , is) _ (, , Put s , f) = execState⁻ is s (f tt)
-execState⁻ {suc m} (suc i , is) s  b              = forth (execState⁻ is s ∘_) b
+execState⁻ {suc m} (suc i , is) s  b              = fourth (execState⁻ is s ∘_) b
 
 execState : ∀ {m n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n}
               {Ψs : Effects ρs αεs} {R : Set ρ} {Rs : Resources ρs}

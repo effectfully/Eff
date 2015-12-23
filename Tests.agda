@@ -4,7 +4,7 @@ open import Prelude
 open import Map
 open import Core
 open import Membership
--- open import Dep
+open import Dep
 
 data Reader {α} (A : Set α) : Effectful α α lzero where
   Get : Reader A A (const A)

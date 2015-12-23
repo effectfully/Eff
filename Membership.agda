@@ -24,7 +24,7 @@ private
             {F₂ : Set α₂ -> (B : Set β₂) -> (B -> Set γ₂) -> Set δ₂}
         -> F₁ ≅ F₂
         -> A₁ ≅ A₂
-        -> F₁ A₁  B               C
+        -> F₁ A₁  B          C
         -> F₂ A₂ (Coerce B) (Coerce ∘ C ∘ uncoerce)
   Subst {α₁} {α₂} {β₁} {β₂} {γ₁} {γ₂} {δ₁} {δ₂} p q x
     rewrite trustMe α₁ α₂ | trustMe β₁ β₂ | trustMe γ₁ γ₂ | trustMe δ₁ δ₂
@@ -50,7 +50,7 @@ invoke⁻ : ∀ n {ρ α ε} {ρs : Level ^ n} {αεs : Level ²^ n}
         -> Eff⁻ Ψs Rs A (λ x -> replaceᵐ (∈→Fin p) (Coerce (R′ x)) Rs) (∈→Fin p , tt)
 invoke⁻  0      ()             a
 invoke⁻ (suc n) (inj₁ (q , r)) a = , , Subst q r a , λ x -> uncoerce x , refl
-invoke⁻ (suc n) (inj₂  p)      a = forth (second (cong (_,_ _)) ∘_) (invoke⁻ n p a)
+invoke⁻ (suc n) (inj₂  p)      a = fourth (second (cong (_,_ _)) ∘_) (invoke⁻ n p a)
 
 invoke : ∀ {n ρ α ε} {ρs : Level ^ n} {αεs : Level ²^ n}
            {Ψ : Effect ρ α ε} {R : Resource ρ}

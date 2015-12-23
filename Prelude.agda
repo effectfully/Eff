@@ -50,12 +50,12 @@ third : ∀ {α β γ δ} {A : Set α} {B : A -> Set β}
       -> (∀ {x} {y : B x} -> C y -> D y) -> (∃ λ x -> Σ (B x) C) -> ∃ λ x -> Σ (B x) D
 third h (x , y , z) = x , y , h z
 
-forth : ∀ {α β γ δ ε} {A : Set α} {B : A -> Set β} {C : ∀ {x} -> B x -> Set γ}
-          {D : ∀ {x} {y : B x} -> C y -> Set δ} {E : ∀ {x} {y : B x} -> C y -> Set ε}
-      -> (∀ {x} {y : B x} {z : C y} -> D z -> E z)
-      -> (∃ λ x -> Σ (B x) λ y -> Σ (C y) D)
-      -> ∃ λ x -> Σ (B x) λ y -> Σ (C y) E
-forth f (x , y , z , w) = x , y , z , f w
+fourth : ∀ {α β γ δ ε} {A : Set α} {B : A -> Set β} {C : ∀ {x} -> B x -> Set γ}
+           {D : ∀ {x} {y : B x} -> C y -> Set δ} {E : ∀ {x} {y : B x} -> C y -> Set ε}
+       -> (∀ {x} {y : B x} {z : C y} -> D z -> E z)
+       -> (∃ λ x -> Σ (B x) λ y -> Σ (C y) D)
+       -> ∃ λ x -> Σ (B x) λ y -> Σ (C y) E
+fourth f (x , y , z , w) = x , y , z , f w
 
 uncurryᵏ : ∀ {α β} {A : Set α} {B : A -> Set β} {k : Σ A B -> Level} {C : ∀ p -> Set (k p)}
          -> (∀ x -> (y : B x) -> C (x , y)) -> (p : Σ A B) -> C p

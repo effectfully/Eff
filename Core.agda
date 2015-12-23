@@ -72,7 +72,7 @@ bind : ∀ {m p n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects 
      -> (∀ y -> Eff⁻ Ψs (Rs′ y) C Rs′′ js)
      -> Eff⁻ Ψs Rs C Rs′′ (is ++ js)
 bind {0}      tt      (y , refl) g = g y
-bind {suc m} (i , is)  b         g = forth (λ f x -> bind is (f x) g) b
+bind {suc m} (i , is)  b         g = fourth (λ f x -> bind is (f x) g) b
 
 _>>=_ : ∀ {m p n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
           {Rs : Resources ρs} {B : Set β} {Rs′ : B -> Resources ρs}
