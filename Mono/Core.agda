@@ -10,10 +10,10 @@ infix  3 _∈_
 Effectful : ∀ α ρ ε -> Set (lsuc (α ⊔ ρ ⊔ ε))
 Effectful α ρ ε = (A : Set α) -> (A -> Set ρ) -> Set ε
 
-Effect : ∀ ρ α ε -> Set (lsuc (α ⊔ ρ ⊔ ε))
+Effect : ∀ ρ α ε -> Set (lsuc (ρ ⊔ α ⊔ ε))
 Effect ρ α ε = Set ρ -> Effectful α ρ ε
 
-Effects : ∀ ρ α ε -> ℕ -> Set (lsuc (α ⊔ ρ ⊔ ε))
+Effects : ∀ ρ α ε -> ℕ -> Set (lsuc (ρ ⊔ α ⊔ ε))
 Effects ρ α ε = Vec (Effect ρ α ε)
 
 Resource : ∀ ρ -> Set (lsuc ρ)
@@ -23,7 +23,7 @@ Resources : ∀ ρ -> ℕ -> Set (lsuc ρ)
 Resources ρ = Vec (Resource ρ)
 
 data Eff {n ρ α ε β} (Ψs : Effects ρ α ε n) (B : Set β) :
-       Resources ρ n -> (B -> Resources ρ n) -> Set (β ⊔ lsuc (ρ ⊔ α) ⊔ ε) where
+       Resources ρ n -> (B -> Resources ρ n) -> Set (lsuc (ρ ⊔ α) ⊔ β ⊔ ε) where
   return : ∀ {Rs′} y -> Eff Ψs B (Rs′ y) Rs′
   call   : ∀ {A R′ Rs Rs′} i
          -> (a : lookup i Ψs (lookup i Rs) A R′)
@@ -51,12 +51,11 @@ _<$>_ : ∀ {n ρ α ε β γ} {Ψs : Effects ρ α ε n} {B : Set β}
 g <$> b = b >>= return ∘ g
 
 _∈_ : ∀ {n ρ α ε}
-    -> Effect ρ α ε × Resource ρ -> Effects ρ α ε n × Resources ρ n -> Set (lsuc (α ⊔ ρ ⊔ ε))
+    -> Effect ρ α ε × Resource ρ -> Effects ρ α ε n × Resources ρ n -> Set (lsuc (ρ ⊔ α ⊔ ε))
 _∈_ {0}     (Φ , S) (Ψs     , Rs)     = ⊥
 _∈_ {suc n} (Φ , S) (Ψ ∷ Ψs , R ∷ Rs) = Φ ≡ Ψ × S ≡ R ⊎ Φ , S ∈ Ψs , Rs 
 
-∈→Fin : ∀ {n ρ α ε} {ΨR : Effect ρ α ε × Resource ρ}
-          {ΨsRs : Effects ρ α ε n × Resources ρ n}
+∈→Fin : ∀ {n ρ α ε} {ΨR : Effect ρ α ε × Resource ρ} {ΨsRs : Effects ρ α ε n × Resources ρ n}
       -> ΨR ∈ ΨsRs -> Fin n
 ∈→Fin {0}                            ()
 ∈→Fin {suc n} {ΨsRs = _ ∷ _ , _ ∷ _} (inj₁ _) = zero
@@ -94,3 +93,34 @@ execEff′ : ∀ {n ρ α ε β γ} {Ψ : Effect ρ α ε} {Ψs : Effects ρ α 
 execEff′              ret out (return y)         = return (y , ret y)
 execEff′ {Rs = _ ∷ _} ret out (call  zero   a f) = execEff′ ret out (f (out a))
 execEff′ {Rs = _ ∷ _} ret out (call (suc i) a f) = call i a λ x -> execEff′ ret out (f x)
+
+
+
+-- For whatever reason instance search loops if we define _∈_ properly.
+-- data _∈_ {ρ α ε} (ΨR : Effect ρ α ε × Resource ρ) :
+--        ∀ {n} -> Effects ρ α ε n × Resources ρ n -> Set where
+--   here  : ∀ {n Ψs Rs} -> _∈_ ΨR {suc n} (proj₁ ΨR ∷ Ψs , proj₂ ΨR ∷ Rs)
+--   there : ∀ {n Φ S Ψs Rs} -> _∈_ ΨR {n} (Ψs , Rs) -> ΨR ∈ Φ ∷ Ψs , S ∷ Rs
+
+-- instance
+--   inst-here : ∀ {n ρ α ε} {Ψ : Effect ρ α ε} {R : Resource ρ}
+--                 {Ψs : Effects ρ α ε n} {Rs : Resources ρ n}
+--             -> Ψ , R ∈ Ψ ∷ Ψs , R ∷ Rs
+--   inst-here = here
+
+--   inst-there : ∀ {n ρ α ε} {Ψ : Effect ρ α ε} {R : Resource ρ}
+--                  {Ψs : Effects ρ α ε n} {Rs : Resources ρ n}
+--                  {Φ S} {{p : Ψ , R ∈ Ψs , Rs}}
+--              -> Ψ , R ∈ Φ ∷ Ψs , S ∷ Rs
+--   inst-there {{p}} = there p
+
+-- ∈→Fin : ∀ {n ρ α ε} {ΨR : Effect ρ α ε × Resource ρ} {ΨsRs : Effects ρ α ε n × Resources ρ n}
+--       -> ΨR ∈ ΨsRs -> Fin n
+-- ∈→Fin  here     = zero
+-- ∈→Fin (there p) = suc (∈→Fin p)
+
+-- expand : ∀ {n ρ α ε} {Ψ : Effect ρ α ε} {R : Resource ρ} {A : Set α}
+--            {R′ : A -> Resource ρ} {Ψs : Effects ρ α ε n} {Rs : Resources ρ n}
+--        -> (p : Ψ , R ∈ Ψs , Rs) -> Ψ R A R′ -> lookup (∈→Fin p) Ψs (lookup (∈→Fin p) Rs) A R′
+-- expand  here     a = a
+-- expand (there p) a = expand p a

@@ -3,25 +3,21 @@ module Effect.State where
 open import Prelude
 open import Core
 
-data State {α} (A : Set α) : Effectful α α (lsuc α) where
+data State {α} (A : Set α) : Effectful α α α where
   Get : State A A (const A)
-  Put : ∀ {B} -> B -> State A ⊤ (const B)
+  Put : A -> State A ⊤ (const A)
 
-get : ∀ {n α} {Ψs : Effects α α (lsuc α) n} {Rs : Resources α n}
+get : ∀ {n α} {Ψs : Effects α α α n} {Rs : Resources α n}
         {A : Set α} {{p : State , A ∈ Ψs , Rs}}
     -> Eff Ψs A Rs _
 get = invoke Get
 
-zap : ∀ {n α} {Ψs : Effects α α (lsuc α) n} {Rs : Resources α n}
-    -> (A {B} : Set α) {{p : State , A ∈ Ψs , Rs}} -> B -> Eff Ψs ⊤ Rs _
-zap A {{p}} y = invoke {{p}} (Put y)
-
-put : ∀ {n α} {Ψs : Effects α α (lsuc α) n} {Rs : Resources α n}
+put : ∀ {n α} {Ψs : Effects α α α n} {Rs : Resources α n}
         {A : Set α} {{p : State , A ∈ Ψs , Rs}}
     -> A -> Eff Ψs ⊤ Rs _
-put = zap _
+put {{p}} = invoke {{p}} ∘ Put
 
-execState : ∀ {n α β} {Ψs : Effects α α (lsuc α) n} {B : Set β}
+execState : ∀ {n α β} {Ψs : Effects α α α n} {B : Set β}
               {Rs : Resources α (suc n)} {Rs′ : B -> Resources α (suc n)}
           -> head Rs
           -> Eff (State ∷ Ψs)  B                  Rs        Rs′
@@ -33,9 +29,9 @@ execState {Rs = _ ∷ _} s (call (suc i)  a      f) = call i a λ x -> execState
 
 open import Data.Bool.Base
 
-eff : Eff [ State ] ℕ [ ℕ ] (λ n -> [ Vec Bool n ])
-eff = get >>= λ n -> zap ℕ (replicate true) >> return n
+eff : Eff (State ∷ State ∷ []) ℕ (ℕ ∷ ⊤ ∷ []) (λ _ -> ℕ ∷ ⊤ ∷ [])
+eff = get >>= λ n -> put n >> return (suc n)
 
--- 3 , true ∷ true ∷ true ∷ []
-test : ∃ (Vec Bool)
-test = runEff $ execState 3 eff
+-- 4 , 3
+test : ℕ × ℕ
+test = proj₁ $ runEff $ execState tt $ execState 3 eff

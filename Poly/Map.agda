@@ -3,7 +3,6 @@ module Map where
 open import Prelude
 
 infixl 6 _^_
-infix  3 _∈_
 
 _^_ : ∀ {α} -> Set α -> ℕ -> Set α
 A ^ 0     = ⊤
@@ -16,6 +15,9 @@ foldr {suc n} B f z (x , xs) = f x (foldr B f z xs)
 
 head : ∀ {n α} {A : Set α} -> A ^ suc n -> A
 head (x , xs) = x
+
+tail : ∀ {n α} {A : Set α} -> A ^ suc n -> A ^ n
+tail (x , xs) = xs
 
 map : ∀ {n α β} {A : Set α} {B : Set β} -> (A -> B) -> A ^ n -> B ^ n
 map f = foldr (_ ^_) (_,_ ∘ f) tt
@@ -36,6 +38,12 @@ zipWith : ∀ {n α β γ} {A : Set α} {B : Set β} {C : Set γ}
 zipWith {0}     f  tt       tt      = tt
 zipWith {suc n} f (x , xs) (y , ys) = f x y , zipWith f xs ys
 
+zip : ∀ {n α β} {A : Set α} {B : Set β} -> A ^ n -> B ^ n -> (A × B) ^ n
+zip = zipWith _,_
+
+projs₁ : ∀ {n α β} {A : Set α} {B : Set β} -> (A × B) ^ n -> A ^ n
+projs₁ = map proj₁
+
 _⊔ⁿ_ : ∀ {n} -> Level ^ n -> Level -> Level
 _⊔ⁿ_ = flip $ foldr _ _⊔_
 
@@ -51,13 +59,21 @@ Union = foldr _ _⊎_ ⊥
 Setₛ : ∀ {n} -> (αs : Level ^ n) -> Set _
 Setₛ αs = Set (max αs)
 
-Setₖₛ : ∀ {n α} {A : Set α} -> (k : A -> Level) -> (xs : A ^ n) -> Set _
-Setₖₛ k xs = Setₛ (map k xs)
+Setᵐ : ∀ {n α} {A : Set α} -> (k : A -> Level) -> (xs : A ^ n) -> Set _
+Setᵐ k xs = Setₛ (map k xs)
 
 Map : ∀ {n α} {A : Set α} {k : A -> Level}
-    -> (∀ x -> Set (k x)) -> (xs : A ^ n) -> Setₖₛ k xs
+    -> (∀ x -> Set (k x)) -> (xs : A ^ n) -> Setᵐ k xs
 Map {0}     B  tt      = ⊤
 Map {suc n} B (x , xs) = B x × Map B xs
+
+headᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ suc n}
+      -> Map B xs -> B (head xs)
+headᵐ (y , ys) = y
+
+tailᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ suc n}
+      -> Map B xs -> Map B (tail xs)
+tailᵐ (y , ys) = ys
 
 foldrᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)}
            {kₛ : ∀ {n} -> A ^ n -> Level} {xs : A ^ n}
@@ -72,10 +88,6 @@ foldrᵐ {suc n} B f z (y , ys) = f y (foldrᵐ B f z ys)
 homo : ∀ {n α β} {A : Set α} {B : Set β} {xs : A ^ n} -> Map (λ _ -> B) xs -> B ^ n
 homo {B = B} = foldrᵐ (λ {n} _ -> B ^ n) _,_ tt
 
-headᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ suc n}
-      -> Map B xs -> B (head xs)
-headᵐ (y , ys) = y
-
 mapᵐ : ∀ {n α} {A : Set α} {k₀ : A -> Level} {k₁ : A -> Level}
          {B : ∀ x -> Set (k₀ x)} {C : ∀ x -> Set (k₁ x)} {xs : A ^ n}
      -> (∀ {x} -> B x -> C x) -> Map B xs -> Map C xs
@@ -86,26 +98,50 @@ lookupᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {x
 lookupᵐ  zero   (y , ys) = y
 lookupᵐ (suc i) (y , ys) = lookupᵐ i ys
 
-replaceᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n} {x}
-         -> (i : Fin n) -> B x -> Map B xs -> Map B (replace i x xs)
+replaceᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n}
+         -> (i : Fin n) -> B (lookup i xs) -> Map B xs -> Map B xs
 replaceᵐ  zero   y (z , ys) = y , ys
 replaceᵐ (suc i) y (z , ys) = z , replaceᵐ i y ys
 
-_∈_ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n} {x}
-    -> B x -> Map B xs -> Set
-y ∈ ys = Union (homo (mapᵐ (y ≅_) ys))
+Setᶻ : ∀ {n α β} {A : Set α} {B : Set β}
+     -> (k : A -> B -> Level) -> (xs : A ^ n) -> (ys : B ^ n) -> Set _
+Setᶻ k xs ys = Setₛ (zipWith k xs ys)
 
-∈→Fin : ∀ n {α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)}
-          {xs : A ^ n} {ys : Map B xs} {x} {y : B x}
-      -> y ∈ ys -> Fin n
-∈→Fin  0      ()
-∈→Fin (suc n) (inj₁ r) = zero
-∈→Fin (suc n) (inj₂ p) = suc (∈→Fin n p)
+-- We could define `Zip' in terms of `Map' and `zip',
+-- but then we would need to define some annoying coercions.
+Zip : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
+    -> (∀ x y -> Set (k x y)) -> (xs : A ^ n) -> (ys : B ^ n) -> Setᶻ k xs ys
+Zip {0}     C  tt       tt      = ⊤
+Zip {suc n} C (x , xs) (y , ys) = C x y × Zip C xs ys
 
--- Tele : ∀ {n} -> (αs : Level ^ n) -> Setₖₛ lsuc αs
--- Tele {0}      tt      = ⊤
--- Tele {suc n} (α , αs) = Σ (Set α) λ A -> A -> Tele αs
+headᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
+          {C : ∀ x y -> Set (k x y)} {xs : A ^ suc n} {ys : B ^ suc n}
+      -> Zip C xs ys -> C (head xs) (head ys)
+headᶻ (y , ys) = y
 
--- Sum : ∀ {n} {αs : Level ^ n} -> Tele αs -> Setₛ αs
--- Sum {0}      tt     = ⊤
--- Sum {suc n} (A , F) = ∃ λ x -> Sum (F x)
+tailᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
+          {C : ∀ x y -> Set (k x y)} {xs : A ^ suc n} {ys : B ^ suc n}
+      -> Zip C xs ys -> Zip C (tail xs) (tail ys)
+tailᶻ (y , ys) = ys
+
+foldrᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level} {C : ∀ x y -> Set (k x y)}
+           {kₛ : ∀ {n} -> A ^ n -> B ^ n -> Level} {xs : A ^ n} {ys : B ^ n}
+       -> (D : ∀ {n} -> (xs : A ^ n) -> (ys : B ^ n) -> Set (kₛ xs ys))
+       -> (∀ {n x y} {xs : A ^ n} {ys : B ^ n} -> C x y -> D xs ys -> D (x , xs) (y , ys))
+       -> D tt tt
+       -> Zip C xs ys
+       -> D xs ys
+foldrᶻ {0}     B f w  tt      = w
+foldrᶻ {suc n} B f w (z , zs) = f z (foldrᶻ B f w zs)
+
+mapᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k₀ k₁ : A -> B -> Level}
+         {C : ∀ x y -> Set (k₀ x y)} {D : ∀ x y -> Set (k₁ x y)}
+         {xs : A ^ n} {ys : B ^ n}
+     -> (∀ {x y} -> C x y -> D x y) -> Zip C xs ys -> Zip D xs ys
+mapᶻ {D = D} f = foldrᶻ (Zip D) (_,_ ∘ f) tt
+
+lookupᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
+            {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n}
+        -> (i : Fin n) -> Zip C xs ys -> C (lookup i xs) (lookup i ys)
+lookupᶻ  zero   (z , zs) = z
+lookupᶻ (suc i) (z , zs) = lookupᶻ i zs

@@ -5,77 +5,86 @@ open import Map
 
 infixl 1 _>>=_
 infixr 2 _>>_
-infixl 6 _<$>_
 
-Effect : ∀ α β -> Set (lsuc (α ⊔ β))
-Effect α β = Set α -> Set β
+_²^_ : ∀ {α} -> Set α -> ℕ -> Set α
+A ²^ n = (A × A) ^ n
 
-Levels : ℕ -> Set
-Levels n = (Level × Level) ^ n
+Effectful : ∀ α ρ ε -> Set (lsuc (α ⊔ ρ ⊔ ε))
+Effectful α ρ ε = (A : Set α) -> (A -> Set ρ) -> Set ε
 
-Effects : ∀ {n} -> (αβs : Levels n) -> Set _
-Effects = Map (uncurryᵏ Effect)
+Effect : ∀ ρ α ε -> Set (lsuc (ρ ⊔ α ⊔ ε))
+Effect ρ α ε = Set ρ -> Effectful α ρ ε
 
-effˡ : ∀ {m n} -> Levels n -> Level -> Fin n ^ m -> Level
-effˡ {0}     αβs γ  tt      = γ
-effˡ {suc m} αβs γ (i , is) = lsuc (proj₁ (lookup i αβs)) ⊔ proj₂ (lookup i αβs) ⊔ effˡ αβs γ is
+Effects : ∀ {n} -> (ρs : Level ^ n) -> (αεs : Level ²^ n) -> Set _
+Effects = Zip (λ ρ -> uncurryᵏ (Effect ρ))
 
-Eff⁻ : ∀ {m n γ} {αβs : Levels n}
-     -> Effects αβs -> Set γ -> (is : Fin n ^ m) -> Set (effˡ αβs γ is)
-Eff⁻ {0}     Fs C  tt      = C
-Eff⁻ {suc m} Fs C (i , is) = ∃ λ A -> lookupᵐ i Fs A × (A -> Eff⁻ Fs C is)
+Resource : ∀ ρ -> Set (lsuc ρ)
+Resource ρ = Set ρ
 
-Eff : ∀ {m n γ} {αβs : Levels n}
-    -> Effects αβs -> Set γ -> (is : Fin n ^ m) -> Set (effˡ αβs γ is)
-Eff = Wrap₃ Eff⁻
+Resources : ∀ {n} -> (ρs : Level ^ n) -> Set _
+Resources = Map Resource
 
-return : ∀ {n γ} {αβs : Levels n} {Fs : Effects αβs} {C : Set γ} -> C -> Eff Fs C tt
-return = wrap
+effˡ : ∀ {m n} -> Level ^ n -> Level ²^ n -> Level -> Fin n ^ m -> Level
+effˡ {0}     ρs αεs β  tt      = β ⊔ max (map lsuc ρs)
+effˡ {suc m} ρs αεs β (i , is) =
+  lsuc (proj₁ (lookup i αεs)) ⊔ lsuc (lookup i ρs) ⊔ proj₂ (lookup i αεs) ⊔ effˡ ρs αεs β is
 
-runEff : ∀ {γ} {C : Set γ} -> Eff tt C tt -> C
-runEff = unwrap
+Eff⁻ : ∀ {m n β} {ρs : Level ^ n} {αεs : Level ²^ n}
+     -> Effects ρs αεs
+     -> Resources ρs
+     -> (B : Set β)
+     -> (B -> Resources ρs)
+     -> (is : Fin n ^ m)
+     -> Set (effˡ ρs αεs β is)
+Eff⁻ {0}     Ψs Rs B Rs′  tt      = ∃ λ y -> Rs ≡ Rs′ y
+Eff⁻ {suc m} Ψs Rs B Rs′ (i , is) =
+  ∃ λ A -> ∃ λ R′ -> lookupᶻ i Ψs (lookupᵐ i Rs) A R′
+                       × ∀ x -> Eff⁻ Ψs (replaceᵐ i (R′ x) Rs) B Rs′ is
 
-bind : ∀ {m p n γ δ} {αβs : Levels n} {Fs : Effects αβs}
-         {C : Set γ} {D : Set δ} {js : Fin n ^ p}
-     -> (is : Fin n ^ m) -> Eff⁻ Fs C is -> (C -> Eff⁻ Fs D js) -> Eff⁻ Fs D (is ++ js)
-bind {0}      tt      z h = h z
-bind {suc m} (i , is) c h = third (λ f x -> bind is (f x) h) c
+record Eff {m n β} {ρs : Level ^ n} {αεs : Level ²^ n}
+           (Ψs : Effects ρs αεs) (Rs : Resources ρs)
+           (B : Set β) (Rs′ : B -> Resources ρs)
+           (is : Fin n ^ m) : Set (effˡ ρs αεs β is) where
+  constructor wrap
+  field unwrap : Eff⁻ Ψs Rs B Rs′ is
+open Eff public
 
-_>>=_ : ∀ {m p n γ δ} {αβs : Levels n} {Fs : Effects αβs}
-          {C : Set γ} {D : Set δ} {is : Fin n ^ m} {js : Fin n ^ p}
-      -> Eff Fs C is -> (C -> Eff Fs D js) -> Eff Fs D (is ++ js)
-_>>=_ {is = is} c h = wrap (bind is (unwrap c) (unwrap ∘ h))
+return : ∀ {n β} {ρs : Level ^ n} {αεs : Level ²^ n}
+           {Ψs : Effects ρs αεs} {B : Set β} {Rs′ : B -> Resources ρs}
+       -> ∀ y -> Eff Ψs (Rs′ y) B Rs′ tt
+return y = wrap (y , refl)
 
-_>>_ : ∀ {m p n γ δ} {αβs : Levels n} {Fs : Effects αβs}
-         {C : Set γ} {D : Set δ} {is : Fin n ^ m} {js : Fin n ^ p}
-     -> Eff Fs C is -> Eff Fs D js -> Eff Fs D (is ++ js)
-c >> d = c >>= const d
+runEff : ∀ {β} {B : Set β} -> Eff tt tt B (const tt) tt -> B
+runEff = proj₁ ∘ unwrap
 
--- Just don't want to prove (n + 0 ≡ 0).
-fmap⁻ : ∀ {m n γ δ} {αβs : Levels n} {Fs : Effects αβs} {C : Set γ} {D : Set δ}
-      -> (is : Fin n ^ m) -> (C -> D) -> Eff⁻ Fs C is -> Eff⁻ Fs D is
-fmap⁻ {0}      tt      h z = h z
-fmap⁻ {suc m} (i , is) h c = third (fmap⁻ is h ∘_) c 
+invoke# : ∀ {n} {ρs : Level ^ n} {αεs : Level ²^ n}
+            {Ψs : Effects ρs αεs} {Rs : Resources ρs}
+            (i : Fin n) {A R′}
+        -> lookupᶻ i Ψs (lookupᵐ i Rs) A R′
+        -> Eff Ψs Rs A (λ x -> replaceᵐ i (R′ x) Rs) (i , tt)
+invoke# i a = wrap (, , a , (_, refl))
 
-_<$>_ : ∀ {m n γ δ} {αβs : Levels n} {Fs : Effects αβs}
-          {C : Set γ} {D : Set δ} {is : Fin n ^ m}
-      -> (C -> D) -> Eff Fs C is -> Eff Fs D is
-_<$>_ {is = is} h = wrap ∘ fmap⁻ is h ∘ unwrap
+bind : ∀ {m p n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+         {Rs : Resources ρs} {B : Set β} {Rs′ : B -> Resources ρs}
+         {C : Set γ} {Rs′′ : C -> Resources ρs} {js : Fin n ^ p}
+     -> (is : Fin n ^ m)
+     -> Eff⁻ Ψs Rs B Rs′ is
+     -> (∀ y -> Eff⁻ Ψs (Rs′ y) C Rs′′ js)
+     -> Eff⁻ Ψs Rs C Rs′′ (is ++ js)
+bind {0}      tt      (y , refl) g = g y
+bind {suc m} (i , is)  b         g = forth (λ f x -> bind is (f x) g) b
 
-invokeᵢ : ∀ {n} {αβs : Levels n} {Fs : Effects αβs}
-        -> (i : Fin n) -> ∀ {A} -> lookupᵐ i Fs A -> Eff Fs A (i , tt)
-invokeᵢ i a = wrap (, a , id)
+_>>=_ : ∀ {m p n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+          {Rs : Resources ρs} {B : Set β} {Rs′ : B -> Resources ρs}
+          {C : Set γ} {Rs′′ : C -> Resources ρs} {is : Fin n ^ m} {js : Fin n ^ p}
+      -> Eff Ψs Rs B Rs′ is -> (∀ y -> Eff Ψs (Rs′ y) C Rs′′ js) -> Eff Ψs Rs C Rs′′ (is ++ js)
+_>>=_ {is = is} b g = wrap (bind is (unwrap b) (unwrap ∘ g))
 
-invoke⁻ : ∀ n {α β} {αβs : Levels n} {A : Set α} {F : Effect α β} {Fs : Effects αβs}
-        -> (p : F ∈ Fs) -> F A -> Eff⁻ Fs A (∈→Fin n p , tt)
-invoke⁻  0      ()       a
-invoke⁻ (suc n) (inj₁ r) a = , hSubst r a , uncoerce
-invoke⁻ (suc n) (inj₂ p) a = invoke⁻ n p a
-
-invoke : ∀ {n α β} {αβs : Levels n} {A : Set α} {F : Effect α β}
-           {Fs : Effects αβs} {{p : F ∈ Fs}}
-       -> F A -> Eff Fs A (∈→Fin n p , tt)
-invoke {n} {{p}} = wrap ∘ invoke⁻ n p 
+_>>_ : ∀ {m p n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+         {Rs₁ Rs₂ : Resources ρs} {B : Set β} {C : Set γ}
+         {Rs′′ : C -> Resources ρs} {is : Fin n ^ m} {js : Fin n ^ p}
+     -> Eff Ψs Rs₁ B (const Rs₂) is -> Eff Ψs Rs₂ C Rs′′ js -> Eff Ψs Rs₁ C Rs′′ (is ++ js)
+b >> c = b >>= const c
 
 non-zeros : ∀ {m n} -> Fin (suc n) ^ m -> ℕ
 non-zeros {0}      tt          = 0
@@ -86,26 +95,3 @@ shift : ∀ {m n} -> (is : Fin (suc n) ^ m) -> Fin n ^ non-zeros is
 shift {0}      tt          = tt
 shift {suc m} (zero  , is) = shift is
 shift {suc m} (suc i , is) = i , shift is
-
-execEff⁻ : ∀ {m n α β γ δ} {αβs : Levels n} {F : Effect α β}
-             {Fs : Effects αβs} {C : Set γ}
-         -> (is : Fin (suc n) ^ m)
-         -> (G : Set γ -> Set δ)
-         -> (C -> G C)
-         -> (∀ {A} -> F A -> A × (G C -> G C))
-         -> Eff⁻ (F , Fs)  C     is
-         -> Eff⁻  Fs      (G C) (shift is)
-execEff⁻ {0}      tt          G ret out  c        = ret c
-execEff⁻ {suc m} (zero  , is) G ret out (, a , f) =
-  let x , g = out a in fmap⁻ (shift is) g (execEff⁻ is G ret out (f x))
-execEff⁻ {suc m} (suc i , is) G ret out (, a , f) =
-  , a , λ x -> execEff⁻ is G ret out (f x)
-
-execEff : ∀ {m n α β γ δ} {αβs : Levels n} {F : Effect α β}
-            {Fs : Effects αβs} {C : Set γ} {is : Fin (suc n) ^ m}
-        -> (G : Set γ -> Set δ)
-        -> (C -> G C)
-        -> (∀ {A} -> F A -> A × (G C -> G C))
-        -> Eff (F , Fs)  C     is
-        -> Eff  Fs      (G C) (shift is)
-execEff {is = is} G ret out = wrap ∘ execEff⁻ is G ret out ∘ unwrap
