@@ -27,24 +27,24 @@ put : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
     -> A -> Eff Ψs Rs ⊤ _ _
 put = zap _
 
-execState⁻ : ∀ {m n β} {ρs : Level ^ suc n} {αεs : Level ²^ n}
-               {Ψs : Effects (tail ρs) αεs} {Rs : Resources ρs}
-               {B : Set β} {Rs′ : B -> Resources ρs}
+execState⁻ : ∀ {m n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n}
+               {Ψs : Effects ρs αεs} {R : Set ρ} {Rs : Resources ρs}
+               {B : Set β} {Rs′ : B -> Resources (ρ , ρs)}
            -> (is : Fin (suc n) ^ m)
-           -> headᵐ Rs
-           -> Eff⁻ (State , Ψs)  Rs         B                   Rs′                   is
-           -> Eff⁻  Ψs          (tailᵐ Rs) (Σ B (headᵐ ∘ Rs′)) (tailᵐ ∘ Rs′ ∘ proj₁) (shift is)
+           -> R
+           -> Eff⁻ (State , Ψs) (R , Rs)  B                   Rs′                   is
+           -> Eff⁻  Ψs           Rs      (Σ B (headᵐ ∘ Rs′)) (tailᵐ ∘ Rs′ ∘ proj₁) (shift is)
 execState⁻ {0}      tt          s (y , refl)      = (y , s) , refl
 execState⁻ {suc m} (zero  , is) s (, , Get   , f) = execState⁻ is s (f s)
 execState⁻ {suc m} (zero  , is) _ (, , Put s , f) = execState⁻ is s (f tt)
 execState⁻ {suc m} (suc i , is) s  b              = forth (execState⁻ is s ∘_) b
 
-execState : ∀ {m n β} {ρs : Level ^ suc n} {αεs : Level ²^ n}
-              {Ψs : Effects (tail ρs) αεs} {Rs : Resources ρs}
-              {B : Set β} {Rs′ : B -> Resources ρs} {is : Fin (suc n) ^ m}
-          -> headᵐ Rs
-          -> Eff (State , Ψs)  Rs         B                   Rs′                   is
-          -> Eff  Ψs          (tailᵐ Rs) (Σ B (headᵐ ∘ Rs′)) (tailᵐ ∘ Rs′ ∘ proj₁) (shift is)
+execState : ∀ {m n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n}
+              {Ψs : Effects ρs αεs} {R : Set ρ} {Rs : Resources ρs}
+              {B : Set β} {Rs′ : B -> Resources (ρ , ρs)} {is : Fin (suc n) ^ m}
+          -> R
+          -> Eff (State , Ψs) (R , Rs)  B                   Rs′                   is
+          -> Eff  Ψs           Rs      (Σ B (headᵐ ∘ Rs′)) (tailᵐ ∘ Rs′ ∘ proj₁) (shift is)
 execState {is = is} s = wrap ∘ execState⁻ is s ∘ unwrap
 
 
