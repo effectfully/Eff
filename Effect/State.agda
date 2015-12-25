@@ -9,9 +9,8 @@ data State {α} (A : Set α) : Effectful α α (lsuc α) where
   Get : State A A (const A)
   Put : ∀ {B} -> B -> State A ⊤ (const B)
 
-get : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
-        {Ψs : Effects ρs αεs} {Rs : Resources ρs}
-        {A : Set α} {{p : State , A ∈ Ψs , Rs}}
+get : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+        {Rs : Resources ρs} {A : Set α} {{p : State , A ∈ Ψs , Rs}}
     -> Eff Ψs Rs A _ _
 get = invoke Get
 
@@ -19,11 +18,10 @@ zap : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
         {Ψs : Effects ρs αεs} {Rs : Resources ρs}
         (A {B} : Set α) {{p : State , A ∈ Ψs , Rs}}
     -> B -> Eff Ψs Rs ⊤ _ _
-zap _ {{p}} = invoke {{p}} ∘ Put
+zap _ {{p}} = invoke′ {{p}} ∘ Put
 
-put : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
-        {Ψs : Effects ρs αεs} {Rs : Resources ρs}
-        {A : Set α} {{p : State , A ∈ Ψs , Rs}}
+put : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+        {Rs : Resources ρs} {A : Set α} {{p : State , A ∈ Ψs , Rs}}
     -> A -> Eff Ψs Rs ⊤ _ _
 put = zap _
 
@@ -46,7 +44,6 @@ execState : ∀ {m n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n}
           -> Eff (State , Ψs) (R , Rs)  B                   Rs′                   is
           -> Eff  Ψs           Rs      (Σ B (headᵐ ∘ Rs′)) (tailᵐ ∘ Rs′ ∘ proj₁) (shift is)
 execState {is = is} s = wrap ∘ execState⁻ is s ∘ unwrap
-
 
 
 open import Data.Bool.Base

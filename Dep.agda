@@ -21,7 +21,7 @@ Call {b = b} C = b ↓>>= C
 ⟨_⟩_ : ∀ {m n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Rs : Resources ρs}
          {B : Set β} {Rs′ : B -> Resources ρs} {is : Fin n ^ m}
      -> (Ψs : Effects ρs αεs) {b : Eff Ψs Rs B Rs′ is} -> (B -> Set γ) -> Set (β ⊔ γ)
-⟨_⟩_ Ψs {B} C = B ↓>>= C
+⟨_⟩_ Ψs {b} C = b ↓>>= C
 
 _↑>>=_ : ∀ {m n β γ} {ρs : Level ^ n} {αεs : Level ²^ n}
            {Ψs : Effects ρs αεs} {Rs : Resources ρs} {B : Set β}

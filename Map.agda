@@ -8,6 +8,9 @@ _^_ : ∀ {α} -> Set α -> ℕ -> Set α
 A ^ 0     = ⊤
 A ^ suc n = A × A ^ n
 
+_²^_ : ∀ {α} -> Set α -> ℕ -> Set α
+A ²^ n = (A × A) ^ n
+
 foldr : ∀ {n α β} {A : Set α}
       -> (B : ℕ -> Set β) -> (∀ {n} -> A -> B n -> B (suc n)) -> B 0 -> A ^ n -> B n
 foldr {0}     B f z  tt      = z

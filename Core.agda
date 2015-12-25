@@ -6,9 +6,6 @@ open import Map
 infixl 1 _>>=_
 infixr 2 _>>_
 
-_²^_ : ∀ {α} -> Set α -> ℕ -> Set α
-A ²^ n = (A × A) ^ n
-
 Effectful : ∀ α ρ ε -> Set (lsuc (α ⊔ ρ ⊔ ε))
 Effectful α ρ ε = (A : Set α) -> (A -> Set ρ) -> Set ε
 
