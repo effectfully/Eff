@@ -30,7 +30,7 @@ data Eff {n ρ α ε β} (Ψs : Effects ρ α ε n) (B : Set β) :
          -> Eff Ψs B Rs Rs′
 ```
 
-I.e. it's a [Freer](http://okmij.org/ftp/Haskell/extensible/more.pdf) monad with the additional notion of resources, which are dependent in the same style as effects in the Idris library. So while a computation can't change the set of effects like in in Idris, it can change the resources. An immediate example is the indexed `State`:
+I.e. it's a [Freer](http://okmij.org/ftp/Haskell/extensible/more.pdf) monad with the additional notion of resources, which are dependent in the same style as effects in the Idris library. So while a computation can't change the set of effects like in in Idris, it can change the resources. A canonical example is the indexed `State`:
 
 ```
 eff : Eff (State , tt) (ℕ , tt) ℕ (λ n -> V.Vec Bool n , tt) _
