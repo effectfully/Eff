@@ -4,7 +4,7 @@ open import Prelude
 open import Map
 open import Core
 open import Membership
-open import Dep
+-- open import Dep
 
 data Reader {α} (A : Set α) : Effectful α α lzero where
   Get : Reader A A (const A)
@@ -21,23 +21,23 @@ runWriter (Put x) = tt , x-}
 ask : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
         {Ψs : Effects ρs αεs} {Rs : Resources ρs}
         {A : Set α} {{p : Reader , A ∈ Ψs , Rs}}
-    -> Eff Ψs Rs A _ _
+    -> Eff Ψs A Rs _
 ask = invoke Get
 
 zap : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
         {Ψs : Effects ρs αεs} {Rs : Resources ρs}
-        (A {B} : Set α) {{p : Writer , A ∈ Ψs , Rs}} -> B -> Eff Ψs Rs ⊤ _ _
-zap _ {{p}} = invoke {{p}} ∘ Put
+        (A {B} : Set α) {{p : Writer , A ∈ Ψs , Rs}} -> B -> Eff Ψs ⊤ Rs _
+zap _ {{p}} = invoke′ {{p}} ∘ Put
 
 tell : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
          {Ψs : Effects ρs αεs} {Rs : Resources ρs}
          {A : Set α} {{p : Writer , A ∈ Ψs , Rs}}
-     -> A -> Eff Ψs Rs ⊤ _ _
+     -> A -> Eff Ψs ⊤ Rs _
 tell = zap _
 
 import Data.Vec as V
 
-eff₁ : Eff (Writer , Reader , tt) (Set , ℕ , tt) ℕ (λ n -> V.Vec Set n , ℕ , tt) _
+eff₁ : Eff (Writer , Reader , tt) ℕ (Set , ℕ , tt) (λ n -> V.Vec Set n , ℕ , tt)
 eff₁ = ask >>= λ n -> zap Set (V.replicate (Fin n)) >> return n
 
 

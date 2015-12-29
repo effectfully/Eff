@@ -96,6 +96,10 @@ mapᵐ : ∀ {n α} {A : Set α} {k₀ : A -> Level} {k₁ : A -> Level}
      -> (∀ {x} -> B x -> C x) -> Map B xs -> Map C xs
 mapᵐ {C = C} f = foldrᵐ (Map C) (_,_ ∘ f) tt
 
+_++ᵐ_ : ∀ {n m α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n} {ys : A ^ m}
+      -> Map B xs -> Map B ys -> Map B (xs ++ ys)
+yz ++ᵐ zs = foldrᵐ (λ xs -> Map _ (xs ++ _)) _,_ zs yz
+
 lookupᵐ : ∀ {n α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n}
         -> (i : Fin n) -> Map B xs -> B (lookup i xs)
 lookupᵐ  zero   (y , ys) = y
@@ -120,12 +124,12 @@ Zip {suc n} C (x , xs) (y , ys) = C x y × Zip C xs ys
 headᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
           {C : ∀ x y -> Set (k x y)} {xs : A ^ suc n} {ys : B ^ suc n}
       -> Zip C xs ys -> C (head xs) (head ys)
-headᶻ (y , ys) = y
+headᶻ (z , zs) = z
 
 tailᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
           {C : ∀ x y -> Set (k x y)} {xs : A ^ suc n} {ys : B ^ suc n}
       -> Zip C xs ys -> Zip C (tail xs) (tail ys)
-tailᶻ (y , ys) = ys
+tailᶻ (z , zs) = zs
 
 foldrᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level} {C : ∀ x y -> Set (k x y)}
            {kₛ : ∀ {n} -> A ^ n -> B ^ n -> Level} {xs : A ^ n} {ys : B ^ n}
@@ -142,6 +146,10 @@ mapᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k₀ k₁ : A -> B -> Level}
          {xs : A ^ n} {ys : B ^ n}
      -> (∀ {x y} -> C x y -> D x y) -> Zip C xs ys -> Zip D xs ys
 mapᶻ {D = D} f = foldrᶻ (Zip D) (_,_ ∘ f) tt
+
+{-_++ᵐ_ : ∀ {n m α} {A : Set α} {k : A -> Level} {B : ∀ x -> Set (k x)} {xs : A ^ n} {ys : A ^ m}
+      -> Map B xs -> Map B ys -> Map B (xs ++ ys)
+yz ++ᵐ zs = foldrᵐ (λ xs -> Map _ (xs ++ _)) _,_ zs yz-}
 
 lookupᶻ : ∀ {n α β} {A : Set α} {B : Set β} {k : A -> B -> Level}
             {C : ∀ x y -> Set (k x y)} {xs : A ^ n} {ys : B ^ n}

@@ -2,9 +2,10 @@ module Core where
 
 open import Prelude
 open import Map
+open import Lifts
 
-infixl 1 _>>=_
-infixr 2 _>>_
+infixl 2 _>>=_
+infixr 1 _>>_
 
 Effectful : ∀ α ρ ε -> Set (lsuc (α ⊔ ρ ⊔ ε))
 Effectful α ρ ε = (A : Set α) -> (A -> Set ρ) -> Set ε
@@ -21,74 +22,84 @@ Resource ρ = Set ρ
 Resources : ∀ {n} -> (ρs : Level ^ n) -> Set _
 Resources = Map Resource
 
-effˡ : ∀ {m n} -> Level ^ n -> Level ²^ n -> Level -> Fin n ^ m -> Level
-effˡ {0}     ρs αεs β  tt      = β ⊔ max (map lsuc ρs)
-effˡ {suc m} ρs αεs β (i , is) =
-  lsuc (proj₁ (lookup i αεs)) ⊔ lsuc (lookup i ρs) ⊔ proj₂ (lookup i αεs) ⊔ effˡ ρs αεs β is
+-- Simple : ∀ {ρ α ε} -> Effect ρ α ε -> Set ρ -> Set α -> Set ρ -> Set ε
+-- Simple Ψ R₁ A R₂ = Ψ R₁ A (const R₂)
 
-Eff⁻ : ∀ {m n β} {ρs : Level ^ n} {αεs : Level ²^ n}
-     -> Effects ρs αεs
-     -> Resources ρs
-     -> (B : Set β)
-     -> (B -> Resources ρs)
-     -> (is : Fin n ^ m)
-     -> Set (effˡ ρs αεs β is)
-Eff⁻ {0}     Ψs Rs B Rs′  tt      = ∃ λ y -> Rs ≡ Rs′ y
-Eff⁻ {suc m} Ψs Rs B Rs′ (i , is) =
-  ∃ λ A -> ∃ λ R′ -> lookupᶻ i Ψs (lookupᵐ i Rs) A R′
-                       × ∀ x -> Eff⁻ Ψs (replaceᵐ i (R′ x) Rs) B Rs′ is
+r′ˡ : Level × Level -> Level -> Level
+r′ˡ (α , ε) ρ = α ⊔ lsuc ρ
 
-record Eff {m n β} {ρs : Level ^ n} {αεs : Level ²^ n}
-           (Ψs : Effects ρs αεs) (Rs : Resources ρs)
-           (B : Set β) (Rs′ : B -> Resources ρs)
-           (is : Fin n ^ m) : Set (effˡ ρs αεs β is) where
-  constructor wrap
-  field unwrap : Eff⁻ Ψs Rs B Rs′ is
-open Eff public
+effˡ : ∀ {n} -> Level ^ n -> Level ²^ n -> Level -> Level
+effˡ ρs αεs β = max (map (lsuc ∘ proj₁) αεs)
+              ⊔ max (zipWith r′ˡ αεs ρs)
+              ⊔ max (map proj₂ αεs)
+              ⊔ max (map proj₁ αεs)
+              ⊔ β
 
-return : ∀ {n β} {ρs : Level ^ n} {αεs : Level ²^ n}
-           {Ψs : Effects ρs αεs} {B : Set β} {Rs′ : B -> Resources ρs}
-       -> ∀ y -> Eff Ψs (Rs′ y) B Rs′ tt
-return y = wrap (y , refl)
+-- data Eff {n β} {ρs : Level ^ n} {αεs : Level ²^ n} (Ψs : Effects ρs αεs) (B : Set β)
+--          : Resources ρs -> (B -> Resources ρs) -> Set (effˡ ρs αεs β) where
+--   return : ∀ {Rs′} y -> Eff Ψs B (Rs′ y) Rs′
+--   call   : ∀ {Rs Rs′} i {A R′}
+--          -> lookupᶻ i Ψs (lookupᵐ i Rs) A R′
+--          -> (∀ x -> Eff Ψs B (replaceᵐ i (R′ x) Rs) Rs′)
+--          -> Eff Ψs B Rs Rs′
 
-runEff : ∀ {β} {B : Set β} -> Eff tt tt B (const tt) tt -> B
-runEff = proj₁ ∘ unwrap
+data Eff {n β} {ρs : Level ^ n} {αεs : Level ²^ n} (Ψs : Effects ρs αεs) (B : Set β)
+         : Resources ρs -> (B -> Resources ρs) -> Set (effˡ ρs αεs β) where
+  return : ∀ {Rs′} y -> Eff Ψs B (Rs′ y) Rs′
+  call   : ∀ {Rs Rs′} i
+         -> (Lift∃ᵐ (lsuc ∘ proj₁) i αεs λ A ->
+               Lift∃ᶻ r′ˡ i αεs ρs λ R′ ->
+                 Lift∃ᵐ proj₂ i αεs {lookupᶻ i Ψs (lookupᵐ i Rs) A R′} λ _ ->
+                   Lift∀ᵐ  proj₁ i αεs λ x ->
+                     Eff Ψs B (replaceᵐ i (R′ x) Rs) Rs′)
+         -> Eff Ψs B Rs Rs′
+
+call′ : ∀ {n β} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs} {B : Set β} {Rs Rs′}
+          i {A R′}
+      -> lookupᶻ i Ψs (lookupᵐ i Rs) A R′
+      -> (∀ x -> Eff Ψs B (replaceᵐ i (R′ x) Rs) Rs′)
+      -> Eff Ψs B Rs Rs′
+call′ i a f = call i (lift∃ᵐ i (, lift∃ᶻ i (, lift∃ᵐ i (a , lift∀ᵐ i f))))
+
+runLifts : ∀ {n β} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs} {B : Set β} {Rs Rs′}
+             i
+         -> (Lift∃ᵐ (lsuc ∘ proj₁) i αεs λ A ->
+               Lift∃ᶻ r′ˡ i αεs ρs λ R′ ->
+                 Lift∃ᵐ proj₂ i αεs {lookupᶻ i Ψs (lookupᵐ i Rs) A R′} λ _ ->
+                   Lift∀ᵐ  proj₁ i αεs λ x ->
+                     Eff Ψs B (replaceᵐ i (R′ x) Rs) Rs′)
+         -> ∃₂ λ A R′ ->
+                lookupᶻ i Ψs (lookupᵐ i Rs) A R′
+              × ∀ x -> Eff Ψs B (replaceᵐ i (R′ x) Rs) Rs′
+runLifts i = second (second (second (lower∀ᵐ i) ∘ lower∃ᵐ i) ∘ lower∃ᶻ i) ∘ lower∃ᵐ i
+
+runᵉ : ∀ {β} {B : Set β} -> Eff tt B tt _ -> B
+runᵉ (return y)  = y
+runᵉ (call () p)
 
 invoke# : ∀ {n} {ρs : Level ^ n} {αεs : Level ²^ n}
             {Ψs : Effects ρs αεs} {Rs : Resources ρs}
             (i : Fin n) {A R′}
         -> lookupᶻ i Ψs (lookupᵐ i Rs) A R′
-        -> Eff Ψs Rs A (λ x -> replaceᵐ i (R′ x) Rs) (i , tt)
-invoke# i a = wrap (, , a , (_, refl))
+        -> Eff Ψs A Rs (λ x -> replaceᵐ i (R′ x) Rs)
+invoke# i a = call′ i a return
 
-bind : ∀ {m p n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
-         {Rs : Resources ρs} {B : Set β} {Rs′ : B -> Resources ρs}
-         {C : Set γ} {Rs′′ : C -> Resources ρs} {js : Fin n ^ p}
-     -> (is : Fin n ^ m)
-     -> Eff⁻ Ψs Rs B Rs′ is
-     -> (∀ y -> Eff⁻ Ψs (Rs′ y) C Rs′′ js)
-     -> Eff⁻ Ψs Rs C Rs′′ (is ++ js)
-bind {0}      tt      (y , refl) g = g y
-bind {suc m} (i , is)  b         g = fourth (λ f x -> bind is (f x) g) b
+{-# TERMINATING #-}
+_>>=_ : ∀ {n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs} {B : Set β}
+          {Rs : Resources ρs} {C : Set γ} {Rs′ : B -> Resources ρs} {Rs′′ : C -> Resources ρs}
+      -> Eff Ψs B Rs Rs′ -> (∀ y -> Eff Ψs C (Rs′ y) Rs′′) -> Eff Ψs C Rs Rs′′
+return y >>= g = g y
+call i p >>= g = let , , a , f = runLifts i p in call′ i a λ x -> f x >>= g
 
-_>>=_ : ∀ {m p n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
-          {Rs : Resources ρs} {B : Set β} {Rs′ : B -> Resources ρs}
-          {C : Set γ} {Rs′′ : C -> Resources ρs} {is : Fin n ^ m} {js : Fin n ^ p}
-      -> Eff Ψs Rs B Rs′ is -> (∀ y -> Eff Ψs (Rs′ y) C Rs′′ js) -> Eff Ψs Rs C Rs′′ (is ++ js)
-_>>=_ {is = is} b g = wrap (bind is (unwrap b) (unwrap ∘ g))
-
-_>>_ : ∀ {m p n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
-         {Rs₁ Rs₂ : Resources ρs} {B : Set β} {C : Set γ}
-         {Rs′′ : C -> Resources ρs} {is : Fin n ^ m} {js : Fin n ^ p}
-     -> Eff Ψs Rs₁ B (const Rs₂) is -> Eff Ψs Rs₂ C Rs′′ js -> Eff Ψs Rs₁ C Rs′′ (is ++ js)
+_>>_ : ∀ {n β γ} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs} {B : Set β}
+         {Rs₁ Rs₂ : Resources ρs} {C : Set γ} {Rs′′ : C -> Resources ρs}
+     -> Eff Ψs B Rs₁ (const Rs₂) -> Eff Ψs C Rs₂ Rs′′ -> Eff Ψs C Rs₁ Rs′′
 b >> c = b >>= const c
 
-non-zeros : ∀ {m n} -> Fin (suc n) ^ m -> ℕ
-non-zeros {0}      tt          = 0
-non-zeros {suc m} (zero  , is) = non-zeros is
-non-zeros {suc m} (suc i , is) = suc (non-zeros is)
-
-shift : ∀ {m n} -> (is : Fin (suc n) ^ m) -> Fin n ^ non-zeros is
-shift {0}      tt          = tt
-shift {suc m} (zero  , is) = shift is
-shift {suc m} (suc i , is) = i , shift is
+{-# TERMINATING #-}
+shiftᵉ : ∀ {n α ρ ε β} {ρs : Level ^ n} {αεs : Level ²^ n}
+           {Ψ : Effect ρ α ε} {R : Resource ρ} {Ψs : Effects ρs αεs}
+           {B : Set β} {Rs : Resources ρs} {Rs′ : B -> Resources ρs}
+       -> Eff Ψs B Rs Rs′ -> Eff (Ψ , Ψs) B (R , Rs) (λ x -> R , Rs′ x) 
+shiftᵉ (return y) = return y
+shiftᵉ (call i p) = let , , a , f = runLifts i p in call′ (suc i) a (shiftᵉ ∘ f)

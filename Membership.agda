@@ -35,7 +35,7 @@ private
 
 _∈_ : ∀ {n ρ α ε} {ρs : Level ^ n} {αεs : Level ²^ n}
     -> Effect ρ α ε × Resource ρ -> Effects ρs αεs × Resources ρs -> Set
-_∈_ {0}     (Φ , S) ( Ψs      ,  Rs)      = ⊥
+_∈_ {0}     (Φ , S) ( tt      ,  tt)      = ⊥
 _∈_ {suc n} (Φ , S) ((Ψ , Ψs) , (R , Rs)) = Φ ≅ Ψ × S ≅ R ⊎ Φ , S ∈ Ψs , Rs 
 
 ∈→Fin : ∀ {n ρ α ε} {ρs : Level ^ n} {αεs : Level ²^ n}
@@ -45,34 +45,22 @@ _∈_ {suc n} (Φ , S) ((Ψ , Ψs) , (R , Rs)) = Φ ≅ Ψ × S ≅ R ⊎ Φ , S
 ∈→Fin {suc n} (inj₁ _) = zero
 ∈→Fin {suc n} (inj₂ p) = suc (∈→Fin p)
 
-invoke′⁻ : ∀ n {ρ α ε} {ρs : Level ^ n} {αεs : Level ²^ n}
-             {Ψ : Effect ρ α ε} {R : Resource ρ}
-             {Ψs : Effects ρs αεs} {Rs : Resources ρs} {A R′}
-         -> (p : Ψ , R ∈ Ψs , Rs)
-         -> Ψ R A R′
-         -> Eff⁻ Ψs Rs A (λ x -> replaceᵐ (∈→Fin p) (Coerce (R′ x)) Rs) (∈→Fin p , tt)
-invoke′⁻  0      ()             a
-invoke′⁻ (suc n) (inj₁ (q , r)) a = , , Subst q r a , λ x -> uncoerce x , refl
-invoke′⁻ (suc n) (inj₂  p)      a = fourth (second (cong (_,_ _)) ∘_) (invoke′⁻ n p a)
-
 invoke′ : ∀ {n ρ α ε} {ρs : Level ^ n} {αεs : Level ²^ n}
-            {Ψ : Effect ρ α ε} {R : Resource ρ}
+            {Ψ : Effect ρ α ε} {R : Resource ρ} {A R′}
             {Ψs : Effects ρs αεs} {Rs : Resources ρs}
-            {A R′} {{p : Ψ , R ∈ Ψs , Rs}}
-        -> Ψ R A R′ -> Eff Ψs Rs A (λ x -> replaceᵐ (∈→Fin p) (Coerce (R′ x)) Rs) (∈→Fin p , tt)
-invoke′ {n} {{p}} = wrap ∘ invoke′⁻ n p
-
-invoke⁻ : ∀ n {ρ α ε} {ρs : Level ^ n} {αεs : Level ²^ n}
-            {Ψ : Effect ρ α ε} {R : Resource ρ}
-            {Ψs : Effects ρs αεs} {Rs : Resources ρs} {A}
-        -> (p : Ψ , R ∈ Ψs , Rs) -> Ψ R A (const R) -> Eff⁻ Ψs Rs A (const Rs) (∈→Fin p , tt)
-invoke⁻  0      ()             a
-invoke⁻ (suc n) (inj₁ (q , r)) a = , , Subst q r a , λ x -> uncoerce x , cong (_, _) (Coerce-≅→≡ r)
-invoke⁻ (suc n) (inj₂  p)      a = fourth (second (cong (_,_ _)) ∘_) (invoke⁻ n p a)
+            {{p : Ψ , R ∈ Ψs , Rs}}
+        -> Ψ R A R′ -> Eff Ψs A Rs (λ x -> replaceᵐ (∈→Fin p) (Coerce (R′ x)) Rs)
+invoke′ {0}     {{()}}           a
+invoke′ {suc n} {{inj₁ (q , r)}} a =
+  call′ zero (Subst q r a) (return ∘ uncoerce)
+invoke′ {suc n} {{inj₂  p}}      a = shiftᵉ (invoke′ {{p}} a)
 
 invoke : ∀ {n ρ α ε} {ρs : Level ^ n} {αεs : Level ²^ n}
-           {Ψ : Effect ρ α ε} {R : Resource ρ}
+           {Ψ : Effect ρ α ε} {R : Resource ρ} {A}
            {Ψs : Effects ρs αεs} {Rs : Resources ρs}
-           {A} {{p : Ψ , R ∈ Ψs , Rs}}
-       -> Ψ R A (const R) -> Eff Ψs Rs A (const Rs) (∈→Fin p , tt)
-invoke {n} {{p}} = wrap ∘ invoke⁻ n p
+           {{p : Ψ , R ∈ Ψs , Rs}}
+       -> Ψ R A (const R) -> Eff Ψs A Rs (const Rs)
+invoke {0}     {{()}}           a
+invoke {suc n} {{inj₁ (q , r)}} a rewrite sym (Coerce-≅→≡ r) =
+  call′ zero (Subst q r a) (return ∘ uncoerce)
+invoke {suc n} {{inj₂  p}}      a = shiftᵉ (invoke {{p}} a)

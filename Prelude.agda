@@ -9,14 +9,25 @@ open import Data.Sum       renaming (map to smap) public
 open import Data.Product   renaming (map to pmap; zip to pzip) hiding (,_) public
 open import Data.List.Base renaming (map to lmap) hiding (foldr; _++_; zipWith; zip) public
 
-infix 4 _≅_
-infix 4 ,_
+infix  4 _≅_
+infix  4 ,_
+infixr 5 _<∨>_
 
 pattern ,_ y = _ , y
 
 data ⊥ {α} : Set α where
 record ⊤ {α} : Set α where
   constructor tt
+
+data Bool {α} : Set α where
+  true false : Bool
+
+_<∨>_ : ∀ {α β} {B : Bool {α} -> Set β} -> B true -> B false -> ∀ b -> B b
+(x <∨> y) true  = x
+(x <∨> y) false = y
+
+if_then_else_ : ∀ {α β} {B : Set β} -> Bool {α} -> B -> B -> B
+if b then x else y = (x <∨> y) b
 
 data _≅_ {α} {A : Set α} (x : A) : ∀ {β} {B : Set β} -> B -> Set where
   hrefl : x ≅ x

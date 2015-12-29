@@ -30,7 +30,7 @@ data Eff {n ρ α ε β} (Ψs : Effects ρ α ε n) (B : Set β) :
          -> Eff Ψs B Rs Rs′
 ```
 
-I.e. it's a [Freer](http://okmij.org/ftp/Haskell/extensible/more.pdf) monad with the additional notion of resources, which are dependent in the same style as effects in the Idris library. So while a computation can't change the set of effects like in in Idris, it can change the resources. A canonical example is the indexed `State`:
+I.e. it's a [Freer](http://okmij.org/ftp/Haskell/extensible/more.pdf) monad with an additional notion of resources, which are dependent in the same style as effects in the Idris library. So while a computation can't change the set of effects like in in Idris, it can change the resources. A canonical example is the indexed `State`:
 
 ```
 eff : Eff (State , tt) (ℕ , tt) ℕ (λ n -> V.Vec Bool n , tt) _
@@ -52,37 +52,18 @@ test = runEff $ execState 3 eff
 The actual definition of `Eff` is more entangled:
 
 ```
-Eff⁻ : ∀ {m n β} {ρs : Level ^ n} {αεs : Level ²^ n}
-     -> Effects ρs αεs
-     -> Resources ρs
-     -> (B : Set β)
-     -> (B -> Resources ρs)
-     -> (is : Fin n ^ m)
-     -> Set (effˡ ρs αεs β is)
-Eff⁻ {0}     Ψs Rs B Rs′  tt      = ∃ λ y -> Rs ≡ Rs′ y
-Eff⁻ {suc m} Ψs Rs B Rs′ (i , is) =
-  ∃ λ A -> ∃ λ R′ -> lookupᶻ i Ψs (lookupᵐ i Rs) A R′
-                       × ∀ x -> Eff⁻ Ψs (replaceᵐ i (R′ x) Rs) B Rs′ is
-
-record Eff {m n β} {ρs : Level ^ n} {αεs : Level ²^ n}
-           (Ψs : Effects ρs αεs) (Rs : Resources ρs)
-           (B : Set β) (Rs′ : B -> Resources ρs)
-           (is : Fin n ^ m) : Set (effˡ ρs αεs β is) where
-  constructor wrap
-  field unwrap : Eff⁻ Ψs Rs B Rs′ is
-open Eff public
+data Eff {n β} {ρs : Level ^ n} {αεs : Level ²^ n} (Ψs : Effects ρs αεs) (B : Set β)
+         : Resources ρs -> (B -> Resources ρs) -> Set (effˡ ρs αεs β) where
+  return : ∀ {Rs′} y -> Eff Ψs B (Rs′ y) Rs′
+  call   : ∀ {Rs Rs′} i
+         -> (Lift∃ᵐ (lsuc ∘ proj₁) i αεs λ A ->
+               Lift∃ᶻ r′ˡ i αεs ρs λ R′ ->
+                 Lift∃ᵐ proj₂ i αεs {lookupᶻ i Ψs (lookupᵐ i Rs) A R′} λ _ ->
+                   Lift∀ᵐ  proj₁ i αεs λ x ->
+                     Eff Ψs B (replaceᵐ i (R′ x) Rs) Rs′)
+         -> Eff Ψs B Rs Rs′
 ```
 
-It's the same `Eff` as before, but defined as a function (like in the case of fully universe polymorphic [`HList`](http://lpaste.net/145163)) parametrised by eta-friendly vectors of levels (I always make vectors of levels eta-friendly, even if it's not needed right now).
-
-With the current definition we can't express non-determinism, because `Eff⁻` is defined by induction on `is`.
-
-```
-mplus : Eff Ψs Rs A Rs′ is -> Eff Ψs Rs A Rs′ js -> Eff Ψs Rs A Rs′ {!!}
-```
-
-What's there in `{!!}`? It's either `is` or `js`, but we can't even say that, because it immediately causes the Setω error.
-
-I'm revising the implementation, but stuck due to [this](https://github.com/agda/agda/issues/1757) bug.
+It's the same `Eff` as before, but with some ugly lifting to make all `call`s lie in the same universe.
 
 For a readable, but not fully universe polymorphic machinery look [here](https://github.com/effectfully/random-stuff/tree/master/MonoEff).

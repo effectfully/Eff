@@ -11,54 +11,46 @@ data State {α} (A : Set α) : Effectful α α (lsuc α) where
 
 get : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
         {Rs : Resources ρs} {A : Set α} {{p : State , A ∈ Ψs , Rs}}
-    -> Eff Ψs Rs A _ _
+    -> Eff Ψs A Rs _
 get = invoke Get
 
 zap : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
         {Ψs : Effects ρs αεs} {Rs : Resources ρs}
         (A {B} : Set α) {{p : State , A ∈ Ψs , Rs}}
-    -> B -> Eff Ψs Rs ⊤ _ _
+    -> B -> Eff Ψs ⊤ Rs _
 zap _ {{p}} = invoke′ {{p}} ∘ Put
 
 put : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
         {Rs : Resources ρs} {A : Set α} {{p : State , A ∈ Ψs , Rs}}
-    -> A -> Eff Ψs Rs ⊤ _ _
+    -> A -> Eff Ψs ⊤ Rs _
 put = zap _
 
-execState⁻ : ∀ {m n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n}
-               {Ψs : Effects ρs αεs} {R : Set ρ} {Rs : Resources ρs}
-               {B : Set β} {Rs′ : B -> Resources (ρ , ρs)}
-           -> (is : Fin (suc n) ^ m)
-           -> R
-           -> Eff⁻ (State , Ψs) (R , Rs)  B                   Rs′                   is
-           -> Eff⁻  Ψs           Rs      (Σ B (headᵐ ∘ Rs′)) (tailᵐ ∘ Rs′ ∘ proj₁) (shift is)
-execState⁻ {0}      tt          s (y , refl)      = (y , s) , refl
-execState⁻ {suc m} (zero  , is) s (, , Get   , f) = execState⁻ is s (f s)
-execState⁻ {suc m} (zero  , is) _ (, , Put s , f) = execState⁻ is s (f tt)
-execState⁻ {suc m} (suc i , is) s  b              = fourth (execState⁻ is s ∘_) b
-
-execState : ∀ {m n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n}
-              {Ψs : Effects ρs αεs} {R : Set ρ} {Rs : Resources ρs}
-              {B : Set β} {Rs′ : B -> Resources (ρ , ρs)} {is : Fin (suc n) ^ m}
+{-# TERMINATING #-}
+execState : ∀ {n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+              {B : Set β} {R : Set ρ} {Rs : Resources ρs} {Rs′ : B -> Resources (ρ , ρs)}
           -> R
-          -> Eff (State , Ψs) (R , Rs)  B                   Rs′                   is
-          -> Eff  Ψs           Rs      (Σ B (headᵐ ∘ Rs′)) (tailᵐ ∘ Rs′ ∘ proj₁) (shift is)
-execState {is = is} s = wrap ∘ execState⁻ is s ∘ unwrap
-
-
-open import Data.Bool.Base
+          -> Eff (State , Ψs)  B                  (R , Rs)  Rs′
+          -> Eff  Ψs          (Σ B (headᵐ ∘ Rs′))  Rs      (tailᵐ ∘ Rs′ ∘ proj₁)
+execState s (return y) = return (y , s)
+execState s (call i p) with runLifts i p
+... | , , a , f with i
+... | suc i' = call′ i' a (execState s ∘ f)
+... | zero   with a
+... | Get    = execState s (f s)
+... | Put s' = execState s' (f tt)
+ 
 import Data.Vec as V
 
-eff₁ : Eff (State , tt) (ℕ , tt) ℕ (λ n -> V.Vec Bool n , tt) _
+eff₁ : Eff (State , tt) ℕ (ℕ , tt) (λ n -> V.Vec Bool n , tt)
 eff₁ = get >>= λ n -> zap ℕ (V.replicate true) >> return n
 
-eff₂ : ∀ {α} -> Eff (State , State , tt) (ℕ , Set α , tt) ℕ (λ _ -> ℕ , Set α , tt) _
+eff₂ : ∀ {α} -> Eff (State , State , tt) ℕ (ℕ , Set α , tt) (λ _ -> ℕ , Set α , tt)
 eff₂ = get >>= λ n -> put n >> return (suc n)
 
 -- 3 , true ∷ true ∷ true ∷ []
 test₁ : ∃ (V.Vec Bool)
-test₁ = runEff $ execState 3 eff₁
+test₁ = runᵉ $ execState 3 eff₁
 
 -- 4 , 3
 test₂ : ℕ × ℕ
-test₂ = proj₁ $ runEff $ execState ℕ $ execState 3 eff₂
+test₂ = proj₁ $ runᵉ $ execState ℕ $ execState 3 eff₂
