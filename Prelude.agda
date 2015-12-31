@@ -7,11 +7,17 @@ open import Data.Nat.Base hiding (_⊔_) public
 open import Data.Fin using (Fin; zero; suc) public
 open import Data.Sum       renaming (map to smap) public
 open import Data.Product   renaming (map to pmap; zip to pzip) hiding (,_) public
-open import Data.List.Base renaming (map to lmap) hiding (foldr; _++_; zipWith; zip) public
+open import Data.List.Base renaming (map to lmap; _++_ to _++ₗ_) hiding (foldr; zipWith; zip) public
 
 infix  4 _≅_
 infix  4 ,_
 infixr 5 _<∨>_
+
+module TrustMe where
+  import Relation.Binary.PropositionalEquality.TrustMe as T
+
+  trustMe : ∀ {α} {A : Set α} -> (x y : A) -> x ≡ y
+  trustMe _ _ = T.trustMe
 
 pattern ,_ y = _ , y
 

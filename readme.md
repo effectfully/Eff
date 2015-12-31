@@ -21,8 +21,8 @@ Resource ρ = Set ρ
 Resources : ∀ ρ -> ℕ -> Set (lsuc ρ)
 Resources ρ = Vec (Resource ρ)
 
-data Eff {n ρ α ε β} (Ψs : Effects ρ α ε n) (B : Set β) :
-       Resources ρ n -> (B -> Resources ρ n) -> Set (lsuc (ρ ⊔ α) ⊔ β ⊔ ε) where
+data Eff {n ρ α ε β} (Ψs : Effects ρ α ε n) (B : Set β)
+         : Resources ρ n -> (B -> Resources ρ n) -> Set (lsuc (ρ ⊔ α) ⊔ β ⊔ ε) where
   return : ∀ {Rs′} y -> Eff Ψs B (Rs′ y) Rs′
   call   : ∀ {A R′ Rs Rs′} i
          -> (a : lookup i Ψs (lookup i Rs) A R′)
@@ -59,7 +59,7 @@ data Eff {n β} {ρs : Level ^ n} {αεs : Level ²^ n} (Ψs : Effects ρs αεs
          -> (Lift∃ᵐ (lsuc ∘ proj₁) i αεs λ A ->
                Lift∃ᶻ r′ˡ i αεs ρs λ R′ ->
                  Lift∃ᵐ proj₂ i αεs {lookupᶻ i Ψs (lookupᵐ i Rs) A R′} λ _ ->
-                   Lift∀ᵐ  proj₁ i αεs λ x ->
+                   Lift∀ᵐ proj₁ i αεs λ x ->
                      Eff Ψs B (replaceᵐ i (R′ x) Rs) Rs′)
          -> Eff Ψs B Rs Rs′
 ```

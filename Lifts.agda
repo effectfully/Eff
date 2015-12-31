@@ -6,20 +6,22 @@ open import Map
 -- ∀′ : ∀ {α β} {A : Set α} -> (A -> Set β) -> Set (α ⊔ β)
 -- ∀′ B = ∀ x -> B x
 
-Liftᵐ-go : ∀ {n α γ} {A : Set α}
-             β (k : A -> Level) i (xs : A ^ n) {B : Set (k (lookup i xs))}
-         -> ((B -> Set γ) -> Set (k (lookup i xs) ⊔ γ))
-         -> (B -> Set γ)
-         -> Set (β ⊔ max (map k xs) ⊔ γ)
-Liftᵐ-go β k  zero    xs      F C = Lift {ℓ = β ⊔ max (map k xs)} (F C)
-Liftᵐ-go β k (suc i) (x , xs) F C = Liftᵐ-go (β ⊔ k x) k i xs F C
+-- Liftᵐ-go : ∀ {n α γ} {A : Set α}
+--              β (k : A -> Level) i (xs : A ^ n) {B : Set (k (lookup i xs))}
+--          -> ((B -> Set γ) -> Set (k (lookup i xs) ⊔ γ))
+--          -> (B -> Set γ)
+--          -> Set (β ⊔ max (map k xs) ⊔ γ)
+-- Liftᵐ-go β k  zero    xs      F C = Lift {ℓ = β ⊔ max (map k xs)} (F C)
+-- Liftᵐ-go β k (suc i) (x , xs) F C = Liftᵐ-go (β ⊔ k x) k i xs F C
 
-Liftᵐ : ∀ {n α γ} {A : Set α}
-          (k : A -> Level) i (xs : A ^ n) {B : Set (k (lookup i xs))}
-      -> ((B -> Set γ) -> Set (k (lookup i xs) ⊔ γ))
-      -> (B -> Set γ)
-      -> Set (max (map k xs) ⊔ γ)
-Liftᵐ = Liftᵐ-go lzero
+-- This generalizes `Lift∃ᵐ' and `Lift∀ᵐ', but not very much,
+-- and we then also need to generalize `Lift∃ᶻ', so I decided to use ad hoc versions.
+-- Liftᵐ : ∀ {n α γ} {A : Set α}
+--           (k : A -> Level) i (xs : A ^ n) {B : Set (k (lookup i xs))}
+--       -> ((B -> Set γ) -> Set (k (lookup i xs) ⊔ γ))
+--       -> (B -> Set γ)
+--       -> Set (max (map k xs) ⊔ γ)
+-- Liftᵐ = Liftᵐ-go lzero
 
 Lift∃ᵐ-go : ∀ {n α γ} {A : Set α}
               β (k : A -> Level) i (xs : A ^ n) {B : Set (k (lookup i xs))}
