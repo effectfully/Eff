@@ -9,24 +9,24 @@ data State {α} (A : Set α) : Effectful α α (lsuc α) where
   Get : State A A (const A)
   Put : ∀ {B} -> B -> State A ⊤ (const B)
 
-get : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+get : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n} {Ψs : Effects ρs αψs}
         {Rs : Resources ρs} {A : Set α} {{p : State , A ∈ Ψs , Rs}}
     -> Eff Ψs A Rs _
 get = invoke Get
 
-zap : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n}
-        {Ψs : Effects ρs αεs} {Rs : Resources ρs}
+zap : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n}
+        {Ψs : Effects ρs αψs} {Rs : Resources ρs}
         (A {B} : Set α) {{p : State , A ∈ Ψs , Rs}}
     -> B -> Eff Ψs ⊤ Rs _
 zap _ {{p}} = invoke′ {{p}} ∘ Put
 
-put : ∀ {n α} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+put : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n} {Ψs : Effects ρs αψs}
         {Rs : Resources ρs} {A : Set α} {{p : State , A ∈ Ψs , Rs}}
     -> A -> Eff Ψs ⊤ Rs _
 put = zap _
 
 {-# TERMINATING #-}
-execState : ∀ {n ρ β} {ρs : Level ^ n} {αεs : Level ²^ n} {Ψs : Effects ρs αεs}
+execState : ∀ {n ρ β} {ρs : Level ^ n} {αψs : Level ²^ n} {Ψs : Effects ρs αψs}
               {B : Set β} {R : Set ρ} {Rs : Resources ρs} {Rs′ : B -> Resources (ρ , ρs)}
           -> R
           -> Eff (State , Ψs)  B                  (R , Rs)  Rs′
