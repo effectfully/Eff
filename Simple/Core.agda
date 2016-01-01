@@ -48,8 +48,7 @@ runᵉ (return y)  = y
 runᵉ (call () p)
 
 invoke# : ∀ {n} {αψs : Level ²^ n} {Ψs : Effects αψs}
-            i {A}
-        -> lookupᵐ i Ψs A -> Eff Ψs A
+        -> ∀ i {A} -> lookupᵐ i Ψs A -> Eff Ψs A
 invoke# i a = call′ i a return
 
 {-# TERMINATING #-}

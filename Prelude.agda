@@ -2,22 +2,19 @@ module Prelude where
 
 open import Level renaming (zero to lzero; suc to lsuc) public
 open import Function public
+open import Relation.Nullary public
 open import Relation.Binary.PropositionalEquality hiding ([_]) public
-open import Data.Nat.Base hiding (_⊔_) public
+open import Data.Nat.Base hiding (_⊔_; _≟_) public
 open import Data.Fin using (Fin; zero; suc) public
-open import Data.Sum       renaming (map to smap) public
-open import Data.Product   renaming (map to pmap; zip to pzip) hiding (,_) public
-open import Data.List.Base renaming (map to lmap; _++_ to _++ₗ_) hiding (foldr; zipWith; zip) public
+open import Data.Fin.Properties using (_≟_) public
+open import Data.Maybe.Base renaming (map to fmap) public
+open import Data.Sum        renaming (map to smap) public
+open import Data.Product    renaming (map to pmap; zip to pzip) hiding (,_) public
+open import Data.List.Base  renaming (map to lmap; _++_ to _++ₗ_) hiding (foldr; zipWith; zip) public
 
 infix  4 _≅_
 infix  4 ,_
 infixr 5 _<∨>_
-
-module TrustMe where
-  import Relation.Binary.PropositionalEquality.TrustMe as T
-
-  trustMe : ∀ {α} {A : Set α} -> (x y : A) -> x ≡ y
-  trustMe _ _ = T.trustMe
 
 pattern ,_ y = _ , y
 
@@ -38,8 +35,29 @@ if b then x else y = (x <∨> y) b
 data _≅_ {α} {A : Set α} (x : A) : ∀ {β} {B : Set β} -> B -> Set where
   hrefl : x ≅ x
 
+hsym : ∀ {α β} {A : Set α} {B : Set β} {x : A} {y : B} -> x ≅ y -> y ≅ x
+hsym hrefl = hrefl
+
 ≅→≡ : ∀ {α} {A : Set α} {x y : A} -> x ≅ y -> x ≡ y
 ≅→≡ hrefl = refl
+
+module TrustMe where
+  import Relation.Binary.PropositionalEquality.TrustMe as T
+
+  trustMe : ∀ {α} {A : Set α} -> (x y : A) -> x ≡ y
+  trustMe _ _ = T.trustMe
+
+  Coerce : ∀ {β α} -> Set α -> Set β
+  Coerce {β} {α} rewrite trustMe α β = id
+
+  uncoerce-cong : ∀ {β α} {A : Set α} -> (F : ∀ {α} -> Set α -> Set α) -> F (Coerce {β} A) -> F A
+  uncoerce-cong {β} {α} F rewrite trustMe α β = id
+
+  uncoerce : ∀ {β α} {A : Set α} -> Coerce {β} A -> A
+  uncoerce = uncoerce-cong id
+
+  Coerce-≅→≡ : ∀ {α β} {A : Set α} {B : Set β} -> A ≅ B -> Coerce A ≡ B
+  Coerce-≅→≡ {α} {β} rewrite trustMe α β = ≅→≡
 
 instance
   refl-instance : ∀ {α} {A : Set α} {x : A} -> x ≅ x
