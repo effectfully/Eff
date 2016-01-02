@@ -10,7 +10,8 @@ open import Data.Fin.Properties using (_≟_) public
 open import Data.Maybe.Base renaming (map to fmap) public
 open import Data.Sum        renaming (map to smap) public
 open import Data.Product    renaming (map to pmap; zip to pzip) hiding (,_) public
-open import Data.List.Base  renaming (map to lmap; _++_ to _++ₗ_) hiding (foldr; zipWith; zip) public
+open import Data.List.Base  renaming (map to lmap; foldr to lfoldr; _++_ to _l++_)
+  hiding (zipWith; zip) public
 
 infix  4 _≅_
 infix  4 ,_
@@ -25,12 +26,12 @@ record ⊤ {α} : Set α where
 data Bool {α} : Set α where
   true false : Bool
 
-_<∨>_ : ∀ {α β} {B : Bool {α} -> Set β} -> B true -> B false -> ∀ b -> B b
-(x <∨> y) true  = x
-(x <∨> y) false = y
+_<∨>_ : ∀ {α β} {B : Bool {α} -> Set β} -> B false -> B true -> ∀ b -> B b
+(x <∨> y) false = x
+(x <∨> y) true  = y
 
 if_then_else_ : ∀ {α β} {B : Set β} -> Bool {α} -> B -> B -> B
-if b then x else y = (x <∨> y) b
+if b then x else y = (y <∨> x) b
 
 data _≅_ {α} {A : Set α} (x : A) : ∀ {β} {B : Set β} -> B -> Set where
   hrefl : x ≅ x
@@ -91,6 +92,16 @@ fourth : ∀ {α β γ δ ε} {A : Set α} {B : A -> Set β} {C : ∀ {x} -> B x
        -> (∃ λ x -> Σ (B x) λ y -> Σ (C y) D)
        -> ∃ λ x -> Σ (B x) λ y -> Σ (C y) E
 fourth f (x , y , z , w) = x , y , z , f w
+
+_[>_<]_ : ∀ {α β γ δ ε} {A : Set α} {B : A -> Set β}
+            {C : A -> Set γ} {D : ∀ {x} -> B x -> Set δ}
+            {E : ∀ {x} {y : B x} -> C x -> D y -> Set ε}
+        -> (f : ∀ x -> C x)
+        -> (∀ {x y} -> (c : C x) -> (d : D y) -> E c d)
+        -> (g : ∀ {x} -> (y : B x) -> D y)
+        -> (p : Σ A B)
+        -> E (f (proj₁ p)) (g (proj₂ p))
+(f [> h <] g) (x , y) = h (f x) (g y)
 
 uncurryᵏ : ∀ {α β} {A : Set α} {B : A -> Set β} {k : Σ A B -> Level} {C : ∀ p -> Set (k p)}
          -> (∀ x -> (y : B x) -> C (x , y)) -> (p : Σ A B) -> C p
