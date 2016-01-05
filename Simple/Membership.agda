@@ -57,3 +57,16 @@ invoke {{p}} a = uncoerce <$> call′ (∈→Fin p) (unfold-lookupᵐ p a) retur
 -- invoke {0}     {{()}}     a
 -- invoke {suc n} {{inj₁ q}} a = call′ zero (Subst q a) (return ∘ uncoerce)
 -- invoke {suc n} {{inj₂ p}} a = shiftᵉ (invoke a)
+
+{-# TERMINATING #-}
+procEff : ∀ {n α ψ β γ} {αψs : Level ²^ n} {Ψ : Effect α ψ}
+            {Ψs : Effects αψs} {B : Set β} {C : Set γ} {{q : Ψ ∈ Ψs}}
+        -> (B -> Eff Ψs C)
+        -> (∀ {A} -> Ψ A -> (A -> Eff Ψs B) -> Eff Ψs C)
+        -> Eff Ψs B
+        -> Eff Ψs C
+procEff       ret k (return y) = ret y
+procEff {{q}} ret k (call i p) with runLifts i p
+... | , a , f with proj i q a
+... | nothing = call′ i a (procEff ret k ∘ f)
+... | just ca = k ca (f ∘ uncoerce)

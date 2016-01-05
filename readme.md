@@ -1,5 +1,7 @@
 # Eff
 
+The readme is outdated. Sad but true.
+
 It's an attempt to construct a fully universe polymorphic effect system in Agda.
 
 Effects are represented exactly like in the Idris [Effects](https://github.com/edwinb/Eff-dev/blob/master/effects/Effects.idr) library:

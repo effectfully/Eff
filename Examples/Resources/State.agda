@@ -13,8 +13,8 @@ eff₂ = get >>= λ n -> put n >> return (suc n)
 
 -- 3 , true ∷ true ∷ true ∷ []
 test₁ : ∃ (V.Vec Bool)
-test₁ = runᵉ $ execState 3 eff₁
+test₁ = runEff $ execState 3 eff₁
 
 -- 4 , 3
 test₂ : ℕ × ℕ
-test₂ = proj₁ $ runᵉ $ execState ℕ $ execState 3 eff₂
+test₂ = proj₁ $ runEff $ execState ℕ $ execState 3 eff₂

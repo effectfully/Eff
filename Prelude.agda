@@ -1,10 +1,11 @@
 module Prelude where
 
 open import Level renaming (zero to lzero; suc to lsuc) public
-open import Function public
+open import Function renaming (_∘′_ to _∘_; _∘_ to _∘′_) public
 open import Relation.Nullary public
 open import Relation.Binary.PropositionalEquality hiding ([_]) public
 open import Data.Nat.Base hiding (_⊔_; _≟_) public
+open import Data.Bool.Base hiding (_≟_) public
 open import Data.Fin using (Fin; zero; suc) public
 open import Data.Fin.Properties using (_≟_) public
 open import Data.Maybe.Base renaming (map to fmap) public
@@ -23,15 +24,23 @@ data ⊥ {α} : Set α where
 record ⊤ {α} : Set α where
   constructor tt
 
-data Bool {α} : Set α where
-  true false : Bool
+⊥₀    = ⊥ {lzero}
+⊤₀    = ⊤ {lzero}
 
-_<∨>_ : ∀ {α β} {B : Bool {α} -> Set β} -> B false -> B true -> ∀ b -> B b
+_<∨>_ : ∀ {α} {B : Bool -> Set α} -> B false -> B true -> ∀ b -> B b
 (x <∨> y) false = x
 (x <∨> y) true  = y
 
-if_then_else_ : ∀ {α β} {B : Set β} -> Bool {α} -> B -> B -> B
-if b then x else y = (y <∨> x) b
+True : Bool -> Set
+True false = ⊥
+True true  = ⊤
+
+False : Bool -> Set
+False = True ∘ not
+
+if′_then_else : ∀ {α} {A : Set α} b -> (True b -> A) -> (False b -> A) -> A
+if′ true  then f else g = f tt
+if′ false then f else g = g tt
 
 data _≅_ {α} {A : Set α} (x : A) : ∀ {β} {B : Set β} -> B -> Set where
   hrefl : x ≅ x

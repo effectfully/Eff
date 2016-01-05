@@ -43,9 +43,9 @@ runLifts : ∀ {n β} {αψs : Level ²^ n} {Ψs : Effects αψs} {B : Set β}
          -> ∃ λ A -> lookupᵐ i Ψs A × (A -> Eff Ψs B)
 runLifts i = second (second (lower∀ᵐ i) ∘ lower∃ᵐ i) ∘ lower∃ᵐ i
 
-runᵉ : ∀ {β} {B : Set β} -> Eff tt B -> B
-runᵉ (return y)  = y
-runᵉ (call () p)
+runEff : ∀ {β} {B : Set β} -> Eff tt B -> B
+runEff (return y)  = y
+runEff (call () p)
 
 invoke# : ∀ {n} {αψs : Level ²^ n} {Ψs : Effects αψs}
         -> ∀ i {A} -> lookupᵐ i Ψs A -> Eff Ψs A
