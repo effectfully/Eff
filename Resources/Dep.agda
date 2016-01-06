@@ -26,10 +26,10 @@ _↑>>=_ : ∀ {n β γ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
        -> (b : Eff Ψs B rs rs′) -> (∀ y -> C y) -> b ↓>>= C
 b ↑>>= g = call g
 
-execᵈ : ∀ {n β γ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs} {Ψs : Effects Rs αψs}
-          {B : Set β} {rs rs′} {b : Eff Ψs B rs rs′} {C : B -> Set γ}
-      -> (run : Eff Ψs B rs rs′ -> B) -> b ↓>>= C -> C (run b)
-execᵈ run (call g) = g _
+execDep : ∀ {n β γ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs} {Ψs : Effects Rs αψs}
+            {B : Set β} {rs rs′} {b : Eff Ψs B rs rs′} {C : B -> Set γ}
+        -> (run : Eff Ψs B rs rs′ -> B) -> b ↓>>= C -> C (run b)
+execDep run (call g) = g _
 
 _<$>ᵈ_ : ∀ {n β γ δ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs} {Ψs : Effects Rs αψs}
            {B : Set β} {rs rs′} {b : Eff Ψs B rs rs′} {C : B -> Set γ} {D : B -> Set δ}

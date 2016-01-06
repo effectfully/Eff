@@ -2,7 +2,7 @@ module Resources.Effect.Error where
 
 open import Resources
 
-data Error {β ε} (E : Set ε) : Effectful (Set ε) β ε where
+data Error {β ε} (E : Set ε) : Effectful β ε where
   Throw : {B : Set β} -> E -> Error E B (const E)
 
 throw : ∀ {n β ε} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
@@ -38,5 +38,19 @@ catchError (return y) h = return y
 catchError (call i p) h with runLifts i p
 ... | , , a , f with i
 ... | suc i' = call′ i' a (flip catchError h ∘′ f)
+... | zero   with a
+... | Throw e = h e
+
+{-# TERMINATING #-}
+catchError′ : ∀ {n β ε ρ α ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
+                {Ψs : Effects Rs αψs} {B : Set β} {E : Set ε} {rs rs′}
+                {R : Set ρ} {Ψ : Effect R α ψ} {r}
+            -> Eff (Error {β} , Ψs) B (E , rs) rs′
+            -> (∀ {rs} -> E -> Eff (Ψ , Ψs) B (r , rs) (λ y -> r , tailʰ n (rs′ y)))
+            -> Eff (Ψ , Ψs) B (r , rs) (λ y -> r , tailʰ n (rs′ y))
+catchError′ (return y) h = return y
+catchError′ (call i p) h with runLifts i p
+... | , , a , f with i
+... | suc i' = call′ (suc i') a (flip catchError′ h ∘′ f)
 ... | zero   with a
 ... | Throw e = h e

@@ -8,11 +8,14 @@ infixl 2 _>>=_
 infixr 1 _>>_
 infixl 6 _<$>_ _<*>_
 
-Effectful : ∀ {ρ} (R : Set ρ) α ψ -> Set (ρ ⊔ lsuc (α ⊔ ψ))
-Effectful R α ψ = (A : Set α) -> (A -> R) -> Set ψ
+Effectful : ∀ {ρ} {R : Set ρ} α ψ -> Set (ρ ⊔ lsuc (α ⊔ ψ))
+Effectful {R = R} α ψ = (A : Set α) -> (A -> R) -> Set ψ
 
 Effect : ∀ {ρ} (R : Set ρ) α ψ -> Set (ρ ⊔ lsuc (α ⊔ ψ))
-Effect R α ψ = R -> Effectful R α ψ
+Effect R α ψ = R -> Effectful {R = R} α ψ
+
+Simple : ∀ α ψ -> Set (lsuc (α ⊔ ψ))
+Simple = Effect ⊤₀
 
 effectsˡ : ∀ {n} -> Level ^ n -> Level ²^ n -> Level
 effectsˡ ρs αψs = max (zipWith (λ{ ρ (α , ψ) -> ρ ⊔ lsuc (α ⊔ ψ) }) ρs αψs)
@@ -28,6 +31,8 @@ lookupᵉ : ∀ {n} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
 lookupᵉ  zero   (Ψ , Ψs) = Ψ
 lookupᵉ (suc i) (Ψ , Ψs) = lookupᵉ i Ψs
 
+Resources = HList
+
 r′ˡ : Level × Level -> Level -> Level
 r′ˡ (α , ψ) ρ = α ⊔ ρ
 
@@ -37,8 +42,6 @@ effˡ ρs αψs β = max (map (lsuc ∘ proj₁) αψs)
               ⊔ max (map proj₂ αψs)
               ⊔ max (map proj₁ αψs)
               ⊔ β
-
-Resources = HList
 
 data Eff {n β} {ρs : Level ^ n} {αψs : Level ²^ n}
          {Rs : Sets ρs} (Ψs : Effects Rs αψs) (B : Set β)
@@ -111,6 +114,18 @@ shiftᵉ : ∀ {n α ρ ψ β} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set 
        -> Eff Ψs B rs rs′ -> Eff (Ψ , Ψs) B (r , rs) (λ x -> r , rs′ x) 
 shiftᵉ (return y) = return y
 shiftᵉ (call i p) = let , , a , f = runLifts i p in call′ (suc i) a (shiftᵉ ∘′ f)
+
+{-# TERMINATING #-}
+runEffM : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n} {M : ∀ {α} -> Set α -> Set α}
+            {Rs : Sets ρs} {Ψs : Effects Rs αψs} {B : Set α} {rs rs′}
+        -> (∀ {α} {A : Set α} -> A -> M A)
+        -> (∀ {α β} {A : Set α} {B : Set β} -> M A -> (A -> M B) -> M B)
+        -> (∀ i {r A r′} -> lookupᵉ i Ψs r A r′ -> M A)
+        -> Eff Ψs B rs rs′
+        -> M B
+runEffM ret bind h (return y) = ret y
+runEffM ret bind h (call i p) = let , , a , f = runLifts i p in
+  bind (h i a) (runEffM ret bind h ∘′ f)
 
 -- Too weak, just for demonstration purposes.
 {-# TERMINATING #-}

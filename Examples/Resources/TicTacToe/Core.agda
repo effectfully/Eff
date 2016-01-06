@@ -7,10 +7,6 @@ open import Relation.Binary.PropositionalEquality renaming ([_] to hide) using (
 open import Data.Fin using (toℕ; inject₁)
 open import Data.Vec as V hiding ([_]; _>>=_; _⊛_)
 
-record Is {α} {A : Set α} (x : A) : Set where
-  ¡ = x
-open Is public
-
 suc-inj : ∀ {n} {i j : Fin n} -> Fin.suc i ≡ suc j -> i ≡ j
 suc-inj refl = refl
 
@@ -141,31 +137,43 @@ data OutOfBounds m p : Set where
   Left  : n ≤ m -> OutOfBounds m p
   Right : n ≤ p -> OutOfBounds m p
 
-data Attempted (c : ℕ × ℕ) p b : Set where
+data Attempted (c : ℕ × ℕ) b : Set where
   InBoundsA    : (cᵢ : Coord)
                -> c ≡ pmap toℕ toℕ cᵢ
-               -> Filled (get cᵢ b) ⊎ Empty (get cᵢ b) × Is (set cᵢ p b)
-               -> Attempted c p b
-  OutOfBoundsA : OutOfBounds (proj₁ c) (proj₂ c) -> Attempted c p b
+               -> Filled (get cᵢ b) ⊎ Empty (get cᵢ b)
+               -> Attempted c b
+  OutOfBoundsA : OutOfBounds (proj₁ c) (proj₂ c) -> Attempted c b
 
-attempt : ∀ {b q} c -> Attempted c q b
-attempt {b} (m , p) with sfromℕ {n} m | inspect (sfromℕ {n}) m
-... | inj₁ le₁ | hide q = OutOfBoundsA (Left le₁)
-... | inj₂ i   | hide q with sfromℕ {n} p | inspect (sfromℕ {n}) p
-... | inj₁ le₂ | hide r = OutOfBoundsA (Right le₂)
-... | inj₂ j   | hide r with get (i , j) b | inspect (get (i , j)) b
-                           | InBoundsA  (i , j) (cong₂ _,_ (sfromℕ→toℕ m q) (sfromℕ→toℕ p r))
-... | empty    | hide s | res = res (inj₂ (subst Empty (sym s) really , _))
-... | filled _ | hide s | res = res (inj₁ (subst Filled (sym s) (player _)))
+attempt : ∀ c b -> Attempted c b
+attempt (m , p) b with sfromℕ {n} m | inspect (sfromℕ {n}) m
+... | inj₁ le₁ | hide r = OutOfBoundsA (Left le₁)
+... | inj₂ i   | hide r with sfromℕ {n} p | inspect (sfromℕ {n}) p
+... | inj₁ le₂ | hide s = OutOfBoundsA (Right le₂)
+... | inj₂ j   | hide s with get (i , j) b | inspect (get (i , j)) b
+                           | InBoundsA (i , j) (cong₂ _,_ (sfromℕ→toℕ m r) (sfromℕ→toℕ p s))
+... | empty    | hide t | res = res (inj₂ (subst Empty  (sym t ) really))
+... | filled _ | hide t | res = res (inj₁ (subst Filled (sym t) (player _)))
 
 --------------------
 
-data Outcome b : Set where
-  Victory : ∀ c -> True (checkAround c b) -> Outcome b
-  Draw    : (∀ c -> Filled (get c b)) -> Outcome b
+record GameState : Set where
+  constructor State:
+  field
+    moves : ℕ
+    turn  : Player
+    board : Board
+open GameState public
+
+data Outcome s : Set where
+  Victory : ∀ c -> True (checkAround c (board s)) -> Outcome s
+  Draw    : moves s ≡ 0 -> Outcome s
 
 record GameOver : Set where
   field
-    {board} : Board
-    result  : Outcome board
+    {state} : GameState
+    result  : Outcome state
 open GameOver public
+
+moveOnDef : GameState -> Coord -> GameState
+moveOnDef (State: (suc n) p b) c = State: n (switch p) (set c p b)
+moveOnDef  s                   c = s

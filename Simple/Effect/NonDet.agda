@@ -43,7 +43,7 @@ msum = lfoldr _<>_ ⟨⟩
 mutual
   msplit : ∀ {n β} {αψs : Level ²^ n} {Ψs : Effects αψs} {B : Set β} {{p : NonDet {β} ∈ Ψs}}
          -> Eff Ψs B -> Eff Ψs (Maybe (B × Eff Ψs B))
-  msplit {Ψs = Ψs} {B} {{p}} = procEff {{p}} (λ y -> return (just (y , ⟨⟩)) ) k where
+  msplit {Ψs = Ψs} {B} {{p}} = procEff {{p}} (λ y -> return (just (y , ⟨⟩))) k where
     k : ∀ {A} -> NonDet A -> (A -> Eff Ψs B) -> Eff Ψs (Maybe (B × Eff Ψs B))
     k MZero f = return nothing
     k MPlus f = rec-msplit (return ∘ just ∘ second (_<> f ltrue)) (msplit (f ltrue)) (f lfalse)
@@ -60,6 +60,7 @@ interleave b₁ b₂ = rec-msplit (return [> _<>_ <] interleave b₂) b₂ b₁
 
 -- `B' and `C' are in the same universe, because `NonDet' is instantiated to `β'.
 -- Should we consider something like (PolyEffect = ∀ {α} -> Set α -> Set α)?
+-- Probably not due to the untypeability of the expression.
 {-# TERMINATING #-}
 _>>-_ : ∀ {n β} {αψs : Level ²^ n} {Ψs : Effects αψs} {B C : Set β} {{p : NonDet {β} ∈ Ψs}}
       -> Eff Ψs B -> (B -> Eff Ψs C) -> Eff Ψs C

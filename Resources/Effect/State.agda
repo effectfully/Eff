@@ -2,7 +2,7 @@ module Resources.Effect.State where
 
 open import Resources
  
-data State {α} (A : Set α) : Effectful (Set α) α (lsuc α) where
+data State {α} (A : Set α) : Effectful α (lsuc α) where
   Get : State A A (const A)
   Put : ∀ {B} -> B -> State A ⊤ (const B)
 
