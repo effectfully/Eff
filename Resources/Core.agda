@@ -5,6 +5,7 @@ open import Map
 open import Lifts
 
 infixl 2 _>>=_
+infixr 1 _>=>_
 infixr 1 _>>_
 infixl 6 _<$>_ _<*>_
 
@@ -92,6 +93,13 @@ _>>=_ : ∀ {n β γ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
       -> Eff Ψs B rs rs′ -> (∀ y -> Eff Ψs C (rs′ y) rs′′) -> Eff Ψs C rs rs′′
 return y >>= g = g y
 call i p >>= g = let , , a , f = runLifts i p in call′ i a λ x -> f x >>= g
+
+_>=>_ : ∀ {n α β γ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs} {Ψs : Effects Rs αψs}
+          {A : Set α} {B : Set β} {C : Set γ} {rs₁′ : A -> Resources Rs} {rs₂′ rs₃′}
+      -> (∀ x -> Eff Ψs B (rs₁′ x) rs₂′)
+      -> (∀ y -> Eff Ψs C (rs₂′ y) rs₃′)
+      -> (∀ x -> Eff Ψs C (rs₁′ x) rs₃′)
+(f >=> g) x = f x >>= g
 
 _>>_ : ∀ {n β γ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
          {Ψs : Effects Rs αψs} {B : Set β} {C : Set γ} {rs₁ rs₂ rs′′}

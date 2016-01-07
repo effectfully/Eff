@@ -3,8 +3,6 @@ module Examples.Resources.TicTacToe.TestSafe where
 open import Prelude
 open import Examples.Resources.TicTacToe.SafeGame 3 3
 
-open import Examples.Resources.TicTacToe.Core using (board)
-
 -- x--
 -- ox-
 -- o-x

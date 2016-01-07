@@ -38,7 +38,7 @@ True true  = ⊤
 False : Bool -> Set
 False = True ∘ not
 
-if′_then_else : ∀ {α} {A : Set α} b -> (True b -> A) -> (False b -> A) -> A
+if′_then_else_ : ∀ {α} {A : Set α} b -> (True b -> A) -> (False b -> A) -> A
 if′ true  then f else g = f tt
 if′ false then f else g = g tt
 
