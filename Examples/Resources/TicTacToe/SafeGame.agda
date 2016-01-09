@@ -1,12 +1,8 @@
-open import Resources hiding ([_])
+open import Examples.Resources.TicTacToe.Prelude
 
 module Examples.Resources.TicTacToe.SafeGame (n : ℕ) (m : ℕ) where
 
-open import Examples.Resources.TicTacToe.Core public
-open InitGame n m public
-
-import Data.Vec as V
-import Data.String.Base
+open import Examples.Resources.TicTacToe.Core n m public
 
 data Game (s : GameState) : Effectful lzero lzero where
   Move : (m : Moveable s) -> Game s (EmptyCoord s) (moveMoveable m)
@@ -21,7 +17,7 @@ Play s = Eff (Game , tt) GameOver (s , tt) (λ g -> state g , tt)
 
 {-# TERMINATING #-}
 game : ∀ s -> Play s
-game s with moveable? s
+game s with moveability s
 ... | inj₁ nm = return $ gameOver $ Draw nm
 ... | inj₂  m = move m >>= k where
   k : ∀ ec -> Play (moveMoveable m ec)
@@ -30,7 +26,7 @@ game s with moveable? s
                       else const (game _)
 
 new : Play _
-new = game $ State: (n * n) x (V.replicate (V.replicate empty))
+new = game $ State: (n * n) x (replicate (replicate empty))
 
 {-# TERMINATING #-}
 execGame : ∀ {s} -> List (ℕ × ℕ) -> Play s -> Maybe GameOver
@@ -44,7 +40,7 @@ execGame {s} ms (call i p) with runLifts i p
 ... | []      = nothing
 ... | m ∷ ms' with inBounds? n m
 ... | inj₁  _             = nothing
-... | inj₂ (inBounds c _) with empty? (get c (board s))
+... | inj₂ (inBounds c _) with contents (get c (board s))
 ... | inj₁ e = execGame ms' (f (emptyAt c e))
 ... | inj₂ _ = nothing
 

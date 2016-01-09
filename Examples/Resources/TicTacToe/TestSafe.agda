@@ -1,6 +1,6 @@
 module Examples.Resources.TicTacToe.TestSafe where
 
-open import Prelude
+open import Examples.Resources.TicTacToe.Prelude
 open import Examples.Resources.TicTacToe.SafeGame 3 3
 
 -- x--
