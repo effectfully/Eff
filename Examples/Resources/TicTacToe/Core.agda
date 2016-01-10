@@ -52,10 +52,7 @@ add  0ᵈ i = just  i
 add +1ᵈ i = msuc  i
 
 next : Direction -> Coord -> Maybe Coord
-next (δᵢ , δⱼ) (i , j) = _,_ ⟨$⟩ add δᵢ i ⊛ add δⱼ j where
-  open import Data.Maybe
-  open import Category.Monad
-  open RawMonad {lzero} monad renaming (_<$>_ to _⟨$⟩_)
+next (δᵢ , δⱼ) (i , j) = _,_ <$>ₘ add δᵢ i <*>ₘ add δⱼ j
 
 get : Coord -> Board -> Cell
 get (i , j) = vlookup j ∘ vlookup i

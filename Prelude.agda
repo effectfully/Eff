@@ -8,17 +8,22 @@ open import Data.Nat.Base hiding (_⊔_; _≟_) public
 open import Data.Bool.Base hiding (_≟_) public
 open import Data.Fin using (Fin; zero; suc) public
 open import Data.Fin.Properties using (_≟_) public
-open import Data.Maybe.Base renaming (map to fmap) public
+open import Data.Maybe.Base hiding (map) public
 open import Data.Sum        renaming (map to smap) public
 open import Data.Product    renaming (map to pmap; zip to pzip) hiding (,_) public
 open import Data.List.Base  renaming (map to lmap; foldr to lfoldr; _++_ to _l++_)
   hiding (zipWith; zip) public
 
-infix  4 _≅_
-infix  4 ,_
-infixr 5 _<∨>_
+infix  4  ,_
+infixr 10 _%
+infix  3  _≅_
+infixr 5  _<∨>_
+infixl 2  _>>=ₘ_
+infixl 6  _<$>ₘ_ _<*>ₘ_
 
 pattern ,_ y = _ , y
+
+_% = _∘_
 
 data ⊥ {α} : Set α where
 record ⊤ {α} : Set α where
@@ -41,6 +46,15 @@ False = True ∘ not
 if′_then_else_ : ∀ {α} {A : Set α} b -> (True b -> A) -> (False b -> A) -> A
 if′ true  then f else g = f tt
 if′ false then f else g = g tt
+
+_>>=ₘ_ : ∀ {α β} {A : Set α} {B : Set β} -> Maybe A -> (A -> Maybe B) -> Maybe B
+a >>=ₘ f = maybe′ f nothing a
+
+_<$>ₘ_ : ∀ {α β} {A : Set α} {B : Set β} -> (A -> B) -> Maybe A -> Maybe B
+f <$>ₘ a = a >>=ₘ just ∘ f
+
+_<*>ₘ_ : ∀ {α β} {A : Set α} {B : Set β} -> Maybe (A -> B) -> Maybe A -> Maybe B
+h <*>ₘ a = h >>=ₘ _<$>ₘ a
 
 data _≅_ {α} {A : Set α} (x : A) : ∀ {β} {B : Set β} -> B -> Set where
   hrefl : x ≅ x

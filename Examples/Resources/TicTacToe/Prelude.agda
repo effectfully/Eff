@@ -9,15 +9,20 @@ open import Data.Vec as Vec using (Vec; []; _∷_; replicate)
 open import Data.String using (String; Costring; toCostring; toList; fromList; unlines)
   renaming (_++_ to _s++_) public
 open import IO.Primitive
-  renaming (return to returnᵢₒ; _>>=_ to _>>=ᵢₒ_; putStrLn to putCostrLn) public
+  renaming (return to returnᵢₒ; _>>=_ to _>>=ᵢₒ_;
+            putStr to putCostr; putStrLn to putCostrLn) public
 
 open import Coinduction
 open import Relation.Binary.PropositionalEquality renaming ([_] to hide) using ()
+open import Data.Char
 open import Data.Fin using (toℕ; inject₁)
 open import Data.Colist hiding (fromList)
 
 postulate getLine : IO Costring
 {-# COMPILED getLine getLine #-}
+
+infixr 2 _>>ᵢₒ_
+infixl 6 _<$>ᵢₒ_
 
 {-# NON_TERMINATING #-}
 fromColist : ∀ {α} {A : Set α} -> Colist A -> List A
@@ -27,8 +32,14 @@ fromColist (x ∷ xs) = x ∷ fromColist (♭ xs)
 _>>ᵢₒ_ : ∀ {α β} {A : Set α} {B : Set β} -> IO A -> IO B -> IO B
 a >>ᵢₒ b = a >>=ᵢₒ const b
 
+_<$>ᵢₒ_ : ∀ {α β} {A : Set α} {B : Set β} -> (A -> B) -> IO A -> IO B
+f <$>ᵢₒ a = a >>=ᵢₒ returnᵢₒ ∘ f
+
 putStrLn : String -> IO _
 putStrLn = putCostrLn ∘ toCostring
+
+putStr : String -> IO _
+putStr = putCostr ∘ toCostring
 
 suc-inj : ∀ {n} {i j : Fin n} -> Fin.suc i ≡ suc j -> i ≡ j
 suc-inj refl = refl
@@ -57,7 +68,7 @@ mpred (suc i) = just (inject₁ i)
 msuc : ∀ {n} -> Fin n -> Maybe (Fin n)
 msuc {1}            zero   = nothing
 msuc {suc (suc _)}  zero   = just (suc zero)
-msuc               (suc i) = fmap suc (msuc i)
+msuc               (suc i) = suc <$>ₘ msuc i
 
 sfromℕ : ∀ {n} m -> n ≤ m ⊎ Fin n
 sfromℕ {0}      m      = inj₁ z≤n
@@ -96,16 +107,17 @@ mapᵢ (suc i) f (x ∷ xs) = x   ∷ mapᵢ i f xs
 vecToString : ∀ {n} -> Vec Char n -> String
 vecToString = fromList ∘ Vec.toList
 
+fromDigits : List ℕ -> ℕ
+fromDigits = foldl (λ a d -> a * 10 + d) 0
+
 _∺_ : ∀ {α} {A : Set α} -> List A -> List (List A) -> List (List A)
 [] ∺ xss = xss
 xs ∺ xss = xs ∷ xss
 
 groupMaybe : ∀ {α β} {A : Set α} {B : Set β} -> (A -> Maybe B) -> List A -> List (List B)
-groupMaybe = go id where
-  go : ∀ {α β} {A : Set α} {B : Set β}
-     -> (List B -> List B) -> (A -> Maybe B) -> List A -> List (List B)
-  go c f  []      = c [] ∺ []
-  go c f (x ∷ xs) = maybe′ (λ y -> go (c ∘ _∷_ y) f xs) (c [] ∺ go id f xs) (f x) where
+groupMaybe {A = A} {B} f = uncurry′ _∺_ ∘ lfoldr step ([] , []) where
+  step : A -> List B × List (List B) -> List B × List (List B)
+  step x (ys , yss) = maybe′ (λ y -> y ∷ ys , yss) ([] , ys ∺ yss) (f x)
 
 List→× : ∀ {α} {A : Set α} -> List A -> Maybe (A × A)
 List→× (x ∷ y ∷ []) = just (x , y)
@@ -124,5 +136,10 @@ charToℕ '8' = just 8
 charToℕ '9' = just 9
 charToℕ  _  = nothing
 
-fromDigits : List ℕ -> ℕ
-fromDigits = foldl (λ a d -> a * 10 + d) 0
+readℕ : String -> Maybe ℕ
+readℕ = (fromDigits <$>ₘ_) ∘ sequence monad ∘ lmap charToℕ ∘ toList where
+  open import Data.List  using (sequence)
+  open import Data.Maybe using (monad)
+
+words : List Char -> List (List Char)
+words = groupMaybe (λ c -> if c == ' ' then nothing else just c)
