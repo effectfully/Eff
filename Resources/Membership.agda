@@ -41,14 +41,14 @@ invoke′ : ∀ {n ρ α ψ} {ρs : Level ^ n} {αψs : Level ²^ n}
         -> Ψ r A r′ -> Eff Ψs A rs (λ x -> replaceʰ (∈→Fin p) (coerce p (r′ x)) rs)
 invoke′ {0}     {{()}}               a
 invoke′ {suc n} {{inj₁ (q , hrefl)}} a = call′ zero (Subst q a) (return ∘′ uncoerce)
-invoke′ {suc n} {{inj₂  p}}          a = shiftᵉ (invoke′ a)
+invoke′ {suc n} {{inj₂  p}}          a = shift (invoke′ a)
 
 invoke : ∀ {n ρ α ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ} {Ψ : Effect R α ψ}
            {Rs : Sets ρs} {r A rs} {Ψs : Effects Rs αψs} {{p : Ψ , r ∈ Ψs , rs}}
        -> Ψ r A (const r) -> Eff Ψs A rs (const rs)
 invoke {0}     {{()}}               a
 invoke {suc n} {{inj₁ (q , hrefl)}} a = call′ zero (Subst q a) (return ∘ uncoerce)
-invoke {suc n} {{inj₂  p}}          a = shiftᵉ (invoke a)
+invoke {suc n} {{inj₂  p}}          a = shift (invoke a)
 
 unfold-lookupᵐ : ∀ {n ρ α ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ}
                    {Rs : Sets ρs} {Ψ : Effect R α ψ} {Ψs : Effects Rs αψs} {r rs}

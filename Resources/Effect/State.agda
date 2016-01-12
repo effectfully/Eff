@@ -17,10 +17,12 @@ zap : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n}
     -> B -> Eff Ψs ⊤ rs _
 zap _ {{p}} = invoke′ {{p}} ∘ Put
 
+-- It may seem we can define `put' as (put = zap _), but we can't.
+-- That would change the value behind the wildcard.
 put : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
         {Ψs : Effects Rs αψs} {rs} {A : Set α} {{p : State , A ∈ Ψs , rs}}
     -> A -> Eff Ψs ⊤ rs _
-put = zap _
+put = invoke ∘ Put
 
 {-# TERMINATING #-}
 execState : ∀ {n α β} {ρs : Level ^ n} {αψs : Level ²^ n} {A : Set α}

@@ -56,7 +56,7 @@ invoke {{p}} a = uncoerce <$> call′ (∈→Fin p) (unfold-lookupᵐ p a) retur
 --        -> Ψ A -> Eff Ψs A
 -- invoke {0}     {{()}}     a
 -- invoke {suc n} {{inj₁ q}} a = call′ zero (Subst q a) (return ∘ uncoerce)
--- invoke {suc n} {{inj₂ p}} a = shiftᵉ (invoke a)
+-- invoke {suc n} {{inj₂ p}} a = shift (invoke a)
 
 {-# TERMINATING #-}
 procEff : ∀ {n α ψ β γ} {αψs : Level ²^ n} {Ψ : Effect α ψ}

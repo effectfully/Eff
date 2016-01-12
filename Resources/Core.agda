@@ -116,11 +116,16 @@ _<*>_ : ∀ {n β γ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
 d <*> b = d >>= _<$> b
 
 {-# TERMINATING #-}
-shiftᵉ : ∀ {n α ρ ψ β} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ} {Rs : Sets ρs}
-           {Ψ : Effect R α ψ} {r} {Ψs : Effects Rs αψs} {B : Set β} {rs rs′}
-       -> Eff Ψs B rs rs′ -> Eff (Ψ , Ψs) B (r , rs) (λ x -> r , rs′ x) 
-shiftᵉ (return y) = return y
-shiftᵉ (call i p) = let , , a , f = runLifts i p in call′ (suc i) a (shiftᵉ ∘′ f)
+shift : ∀ {n α ρ ψ β} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ} {Rs : Sets ρs}
+          {Ψ : Effect R α ψ} {r} {Ψs : Effects Rs αψs} {B : Set β} {rs rs′}
+      -> Eff Ψs B rs rs′ -> Eff (Ψ , Ψs) B (r , rs) (λ y -> r , rs′ y) 
+shift (return y) = return y
+shift (call i p) = let , , a , f = runLifts i p in call′ (suc i) a (shift ∘′ f)
+
+embed : ∀ {n α ρ ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ} {Rs : Sets ρs}
+          {Ψ : Effect R α ψ} {r A r′} {Ψs : Effects Rs αψs} {rs₁ rs₂}
+      -> Eff Ψs (Ψ r A r′) rs₁ (const rs₂) -> Eff (Ψ , Ψs) A (r , rs₁) (λ x -> r′ x , rs₂)
+embed a = shift a >>= invoke# zero
 
 {-# TERMINATING #-}
 runEffM : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n} {M : ∀ {α} -> Set α -> Set α}

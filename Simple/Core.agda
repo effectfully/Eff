@@ -70,10 +70,10 @@ _<*>_ : ∀ {n β γ} {αψs : Level ²^ n} {Ψs : Effects αψs} {B : Set β} {
 d <*> b = d >>= _<$> b
 
 {-# TERMINATING #-}
-shiftᵉ : ∀ {n α ψ β} {αψs : Level ²^ n} {Ψ : Effect α ψ} {Ψs : Effects αψs} {B : Set β}
-       -> Eff Ψs B -> Eff (Ψ , Ψs) B
-shiftᵉ (return y) = return y
-shiftᵉ (call i p) = let , a , f = runLifts i p in call′ (suc i) a (shiftᵉ ∘ f)
+shift : ∀ {n α ψ β} {αψs : Level ²^ n} {Ψ : Effect α ψ} {Ψs : Effects αψs} {B : Set β}
+      -> Eff Ψs B -> Eff (Ψ , Ψs) B
+shift (return y) = return y
+shift (call i p) = let , a , f = runLifts i p in call′ (suc i) a (shift ∘ f)
 
 {-# TERMINATING #-}
 execEff : ∀ {n α ψ β γ} {αψs : Level ²^ n} {Ψ : Effect α ψ}
