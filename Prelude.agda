@@ -32,6 +32,9 @@ record ⊤ {α} : Set α where
 ⊥₀    = ⊥ {lzero}
 ⊤₀    = ⊤ {lzero}
 
+⊥-elim : ∀ {α β} {A : Set α} -> ⊥ {β} -> A
+⊥-elim ()
+
 _<∨>_ : ∀ {α} {B : Bool -> Set α} -> B false -> B true -> ∀ b -> B b
 (x <∨> y) false = x
 (x <∨> y) true  = y

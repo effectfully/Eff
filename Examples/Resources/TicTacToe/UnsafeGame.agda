@@ -48,9 +48,9 @@ game s with moveability s
 ... | inj₁ nm = return $ gameOver $ Draw nm
 ... | inj₂  m = move m >>= k where
   k : ∀ gc -> Play (runGetCoord m gc)
-  k  Interrupted                            = throw′  RInterrupted
-  k (Bounds (inj₂  ob))                     = throw′ (ROutOfBounds ob)
-  k (Bounds (inj₁ (inBounds c _ , inj₂ f))) = throw′ (RFilled c _ f)
+  k  Interrupted                            = throw  RInterrupted
+  k (Bounds (inj₂  ob))                     = throw (ROutOfBounds ob)
+  k (Bounds (inj₁ (inBounds c _ , inj₂ f))) = throw (RFilled c _ f)
   k (Bounds (inj₁ (inBounds c _ , inj₁ e))) =
     if′ checkAround c _
       then return ∘′ gameOver ∘ Victory c

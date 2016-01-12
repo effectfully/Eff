@@ -49,3 +49,22 @@ invoke : ∀ {n ρ α ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ} {
 invoke {0}     {{()}}               a
 invoke {suc n} {{inj₁ (q , hrefl)}} a = call′ zero (Subst q a) (return ∘ uncoerce)
 invoke {suc n} {{inj₂  p}}          a = shiftᵉ (invoke a)
+
+unfold-lookupᵐ : ∀ {n ρ α ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ}
+                   {Rs : Sets ρs} {Ψ : Effect R α ψ} {Ψs : Effects Rs αψs} {r rs}
+               -> (p : Ψ , r ∈ Ψs , rs) -> R -> lookupᵐ (∈→Fin p) Rs
+unfold-lookupᵐ {0}     ()                 r
+unfold-lookupᵐ {suc n} (inj₁ (q , hrefl)) r = r
+unfold-lookupᵐ {suc n} (inj₂  p)          r = unfold-lookupᵐ p r
+
+unfold-lookupᵉ : ∀ {n ρ α ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ}
+                   {Rs : Sets ρs} {Ψ : Effect R α ψ} {Ψs : Effects Rs αψs} {r rs}
+               -> ∀ (p : Ψ , r ∈ Ψs , rs) {A r′}
+               -> Ψ r A r′
+               -> lookupᵉ (∈→Fin p)
+                           Ψs
+                          (lookupʰ (∈→Fin p) rs) (Coerce A)
+                          (unfold-lookupᵐ p ∘ r′ ∘ uncoerce)
+unfold-lookupᵉ {0}     ()                 a
+unfold-lookupᵉ {suc n} (inj₁ (q , hrefl)) a = Subst q a
+unfold-lookupᵉ {suc n} (inj₂  p)          a = unfold-lookupᵉ p a

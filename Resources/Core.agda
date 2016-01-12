@@ -81,8 +81,7 @@ runEff : ∀ {β} {B : Set β} -> Eff tt B tt _ -> B
 runEff (return y)  = y
 runEff (call () p)
 
-invoke# : ∀ {n β} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
-            {Ψs : Effects Rs αψs} {B : Set β} {rs}
+invoke# : ∀ {n} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs} {Ψs : Effects Rs αψs} {rs}
             i {A r′}
         -> lookupᵉ i Ψs (lookupʰ i rs) A r′ -> Eff Ψs A rs (λ x -> replaceʰ i (r′ x) rs)
 invoke# i a = call′ i a return
