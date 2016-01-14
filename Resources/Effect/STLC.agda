@@ -7,7 +7,6 @@ infixl 5 _▻_
 infixl 6 _·_
 
 data Type : Set where
-  ι   : Type
   _⇒_ : Type -> Type -> Type
 
 data Con : Set where
@@ -20,7 +19,6 @@ data In σ : Con -> Set where
 
 Sig = Con × Type
 
--- Emb
 data Term : Effect Sig lzero lzero where
   Var : ∀ {Γ σ}   -> In σ Γ -> Term (Γ , σ)     Sig   id
   Lam : ∀ {Γ σ τ} ->           Term (Γ , σ ⇒ τ) ⊤    (λ _ -> Γ ▻ σ ,  τ)
@@ -43,17 +41,20 @@ _·_ {σ = σ} {{p}} f x = invoke′ {{p}} (App {σ = σ}) >>= f <∨> x
 
 
 
-Termᴱ : ∀ {n} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
-      -> Effects Rs αψs -> Type -> Resources Rs -> Resources Rs -> Set _
-Termᴱ Ψs σ rs₁ rs₂ = Eff {Rs = Sig , _} (Term , Ψs) Sig ((ε , σ) , rs₁) (_, rs₂)
+Termᵢ : ∀ {s} -> Set
+Termᵢ {s} = Term s Sig id
 
-A : ∀ {σ τ} -> Termᴱ tt ((σ ⇒ τ) ⇒ σ ⇒ τ) tt tt
+Termᴱ : ∀ {n} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
+      -> Effects Rs αψs -> Con -> Type -> Resources Rs -> Resources Rs -> Set _
+Termᴱ Ψs Γ σ rs₁ rs₂ = Eff {Rs = Sig , _} (Term , Ψs) Sig ((Γ , σ) , rs₁) (_, rs₂)
+
+A : ∀ {σ τ} -> Termᴱ tt ε ((σ ⇒ τ) ⇒ σ ⇒ τ) tt tt
 A = lam >> lam >> var (vs vz) · var vz
 
 open import Resources.Effect.State
 
 test : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
-         {Ψs : Effects Rs αψs} {rs : Resources Rs} {A : Set α} {σ τ rs}
-         {{p₁ : State , Term _ _ _ ∈ Ψs , rs}} {{p₂ : State , ℕ ∈ Ψs , rs}}
-     -> Termᴱ Ψs ((σ ⇒ τ) ⇒ τ) rs _
+         {Ψs : Effects Rs αψs} {rs : Resources Rs} {A : Set α} {Γ σ τ rs}
+         {{p₁ : State , Termᵢ ∈ Ψs , rs}} {{p₂ : State , ℕ ∈ Ψs , rs}}
+     -> Termᴱ Ψs Γ ((σ ⇒ τ) ⇒ τ) rs _
 test = lam >> shift (put 0) >> var vz · embed get

@@ -86,6 +86,11 @@ invoke# : ∀ {n} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs} {Ψs :
         -> lookupᵉ i Ψs (lookupʰ i rs) A r′ -> Eff Ψs A rs (λ x -> replaceʰ i (r′ x) rs)
 invoke# i a = call′ i a return
 
+invoke₀ : ∀ {n ρ α ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ}
+            {Rs : Sets ρs} {Ψ : Effect R α ψ} {Ψs : Effects Rs αψs} {r A r′ rs}
+        -> Ψ r A r′ -> Eff (Ψ , Ψs) A (r , rs) (λ x -> r′ x , rs)
+invoke₀ = invoke# zero
+
 {-# TERMINATING #-}
 _>>=_ : ∀ {n β γ} {ρs : Level ^ n} {αψs : Level ²^ n} {Rs : Sets ρs}
           {Ψs : Effects Rs αψs} {B : Set β} {C : Set γ} {rs rs′ rs′′}
@@ -125,7 +130,7 @@ shift (call i p) = let , , a , f = runLifts i p in call′ (suc i) a (shift ∘�
 embed : ∀ {n α ρ ψ} {ρs : Level ^ n} {αψs : Level ²^ n} {R : Set ρ} {Rs : Sets ρs}
           {Ψ : Effect R α ψ} {r A r′} {Ψs : Effects Rs αψs} {rs₁ rs₂}
       -> Eff Ψs (Ψ r A r′) rs₁ (const rs₂) -> Eff (Ψ , Ψs) A (r , rs₁) (λ x -> r′ x , rs₂)
-embed a = shift a >>= invoke# zero
+embed a = shift a >>= invoke₀
 
 {-# TERMINATING #-}
 runEffM : ∀ {n α} {ρs : Level ^ n} {αψs : Level ²^ n} {M : ∀ {α} -> Set α -> Set α}

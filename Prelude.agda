@@ -87,8 +87,11 @@ module TrustMe where
   Coerce-≅→≡ {α} {β} rewrite trustMe α β = ≅→≡
 
 instance
-  refl-instance : ∀ {α} {A : Set α} {x : A} -> x ≅ x
-  refl-instance = hrefl
+  refl-instance : ∀ {α} {A : Set α} {x : A} -> x ≡ x
+  refl-instance = refl
+
+  hrefl-instance : ∀ {α} {A : Set α} {x : A} -> x ≅ x
+  hrefl-instance = hrefl
 
   ,-instance : ∀ {α β} {A : Set α} {B : A -> Set β} {{x : A}} {{y : B x}} -> Σ A B
   ,-instance {{x}} {{y}} = x , y
