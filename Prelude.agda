@@ -8,11 +8,11 @@ open import Data.Nat.Base hiding (_⊔_; _≟_) public
 open import Data.Bool.Base hiding (_≟_) public
 open import Data.Fin using (Fin; zero; suc) public
 open import Data.Fin.Properties using (_≟_) public
-open import Data.Maybe.Base hiding (map) public
+open import Data.Maybe.Base hiding   (map) public
 open import Data.Sum        renaming (map to smap) public
 open import Data.Product    renaming (map to pmap; zip to pzip) hiding (,_) public
-open import Data.List.Base  renaming (map to lmap; foldr to lfoldr; _++_ to _l++_)
-  hiding (zipWith; zip) public
+open import Data.List.Base  renaming (map to lmap; zip to lzip; zipWith to lzipWith;
+  foldr to lfoldr; _++_ to _l++_) public
 
 infix  4  ,_
 infixr 10 _%

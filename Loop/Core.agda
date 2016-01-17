@@ -4,54 +4,89 @@ module Loop.Core where
 
 open import Prelude
 
+infix  3 _∈₁_ _∈_
 infixl 2 _>>=_
 infixr 1 _>>_
 
-data List₁ {A} (B : A -> Set) : List A -> Set where
-  []₁  : List₁ B []
-  _∷₁_ : ∀ {x xs} -> B x -> List₁ B xs -> List₁ B (x ∷ xs)
+List₁ : ∀ {A} (B : A -> Set) -> List A -> Set
+List₁ B  []      = ⊤
+List₁ B (x ∷ xs) = B x × List₁ B xs
 
 lmap₁ : ∀ {A} {B : A -> Set} -> (∀ x -> B x) -> (xs : List A) -> List₁ B xs
-lmap₁ f  []      = []₁
-lmap₁ f (x ∷ xs) = f x ∷₁ lmap₁ f xs
+lmap₁ f  []      = tt
+lmap₁ f (x ∷ xs) = f x , lmap₁ f xs
 
 head₁ : ∀ {A} {B : A -> Set} {x xs} -> List₁ B (x ∷ xs) -> B x
-head₁ (y ∷₁ ys) = y
+head₁ (y , ys) = y
 
 tail₁ : ∀ {A} {B : A -> Set} {x xs} -> List₁ B (x ∷ xs) -> List₁ B xs
-tail₁ (y ∷₁ ys) = ys
+tail₁ (y , ys) = ys
 
-_∈_ : ∀ {A} -> A -> List A -> Set
-y ∈  []      = ⊥
-y ∈ (x ∷ xs) = y ≡ x ⊎ y ∈ xs
+data _∈₁_ {A} {B : A -> Set} {x} (y : B x) : ∀ {xs} -> List₁ B xs -> Set where
+  here₁  : ∀ {xs} {ys : List₁ B xs} -> y ∈₁ y , ys
+  there₁ : ∀ {x xs} {z : B x} {ys : List₁ B xs} -> y ∈₁ ys -> y ∈₁ z , ys 
 
--- The laziness is necessary.
-replace₁ : ∀ {A} {B : A -> Set} {x} {xs : List A}
-         -> (p : x ∈ xs) -> B x -> List₁ B xs -> List₁ B xs
-replace₁ {xs = []}     ()          z []₁
-replace₁ {xs = x ∷ xs} (inj₁ refl) z ys = z ∷₁ tail₁ ys
-replace₁ {xs = x ∷ xs} (inj₂ p)    z ys = head₁ ys ∷₁ replace₁ p z (tail₁ ys)
+_∈_ : ∀ {A} {B C : A -> Set} {x xs} -> B x × C x -> List₁ B xs × List₁ C xs -> Set
+_∈_ {x = x₁} {[]}     (y₁ , z₁) (tt        , tt      )  = ⊥
+_∈_ {x = x₁} {x₂ ∷ _} (y₁ , z₁) ((y₂ , ys) , (z₂ , zs)) = x₁ ≡ x₂ × y₁ ≅ y₂ × z₁ ≅ z₂
+                                                        ⊎ y₁ , z₁ ∈ ys , zs
+
+un∈ʳ : ∀ {A} {B C : A -> Set} {x xs} {y : B x} {z : C x} {ys : List₁ B xs} {zs : List₁ C xs}
+     -> y , z ∈ ys , zs -> z ∈₁ zs
+un∈ʳ {xs = []}     ()
+un∈ʳ {xs = _ ∷ _} (inj₁ (refl , hrefl , hrefl)) = here₁
+un∈ʳ {xs = _ ∷ _} (inj₂ p)                      = there₁ (un∈ʳ p)
+
+replace₁ : ∀ {A} {B : A -> Set} {x} {xs : List A} {y : B x} {ys : List₁ B xs}
+         -> B x -> y ∈₁ ys -> List₁ B xs
+replace₁ {ys = y , ys} z  here₁     = z , ys
+replace₁ {ys = y , ys} z (there₁ p) = y , replace₁ z p
+
+--------------------
+
+Sets : Set
+Sets = List Set
+
+HList : Sets -> Set
+HList = List₁ id
+
+Resources = HList
 
 Effectful : ∀ {R} -> Set
 Effectful {R} = (A : Set) -> (A -> R) -> Set
+ 
+Effect : Set -> Set
+Effect R = R -> Effectful {R}
 
-AnEffect : Set -> Set
-AnEffect R = R -> Effectful {R}
+Effects : Sets -> Set
+Effects = List₁ Effect
 
-record Effect : Set where
-  constructor the
-  field
-    {Res} : Set
-    eff   : AnEffect Res
-    res   : Res
-open Effect public
+-- The (∀ {Rs}) part might be too restrictive.
+HigherEffect : Set
+HigherEffect = ∀ {Rs} -> Effects Rs -> Effect (Resources Rs)
 
-data IFreer {R : Set} (Ψ : AnEffect R) : AnEffect R where
-  return : ∀ {B r′} -> (y : B) -> IFreer Ψ (r′ y) B r′
+HigherEffects : Set
+HigherEffects = List HigherEffect
+
+Unionᵉ : HigherEffect
+Unionᵉ {[]}     tt       tt      A rs′ = ⊥
+Unionᵉ {_ ∷ _} (Ψ , Ψs) (r , rs) A rs′ =        Ψ  r  A (head₁ ∘ rs′)
+                                       ⊎ Unionᵉ Ψs rs A (tail₁ ∘ rs′)
+
+_⊎ᵒᵉ_ : HigherEffect -> HigherEffect -> HigherEffect
+(Φ ⊎ᵒᵉ Ξ) Ψs rs A rs′ = Φ Ψs rs A rs′ ⊎ Ξ Ψs rs A rs′
+
+Unionᵒᵉ : HigherEffects -> HigherEffect
+Unionᵒᵉ = lfoldr _⊎ᵒᵉ_ (λ _ _ _ _ -> ⊥)
+
+--------------------
+
+data IFreer {R : Set} (Ψ : Effect R) : Effect R where
+  return : ∀ {B r′} y -> IFreer Ψ (r′ y) B r′
   call   : ∀ {A B r r′ r′′} -> Ψ r A r′ -> (∀ x -> IFreer Ψ (r′ x) B r′′) -> IFreer Ψ r B r′′
 
-perform : ∀ {R : Set} {Ψ : AnEffect R} {r A r′} -> Ψ r A r′ -> IFreer Ψ r A r′
-perform a = call a return
+liftᶠ : ∀ {R Ψ r A r′} -> Ψ r A r′ -> IFreer {R} Ψ r A r′
+liftᶠ a = call a return
 
 _>>=_ : ∀ {R Ψ r B r′ C r′′}
       -> IFreer {R} Ψ r B r′ -> (∀ y -> IFreer Ψ (r′ y) C r′′) -> IFreer Ψ r C r′′
@@ -62,34 +97,38 @@ _>>_ : ∀ {R Ψ r₁ B r₂ C r′′}
      -> IFreer {R} Ψ r₁ B (const r₂) -> IFreer Ψ r₂ C r′′ -> IFreer Ψ r₁ C r′′
 b >> c = b >>= const c
 
-Effects : Set
-Effects = List Effect
+--------------------
 
-Union : ∀ Ψs -> List₁ Res Ψs -> (A : Set) -> (A -> List₁ Res Ψs) -> Set
-Union  []       []₁      A rs′ = ⊥
-Union (Ψ ∷ Ψs) (r ∷₁ rs) A rs′ = eff Ψ r A (head₁ ∘ rs′) ⊎ Union Ψs rs A (tail₁ ∘ rs′)
+record WUnionᵒᵉ {Rs} Φs Ψs (rs : Resources Rs) A rs′ : Set where
+  constructor wrapUnionᵒᵉ
+  field unwrapUnionᵒᵉ : Unionᵒᵉ Φs Ψs rs A rs′
 
-Eff : ∀ Ψs -> (B : Set) -> (B -> List₁ Res Ψs)  -> Set
-Eff Ψs = IFreer (Union Ψs) (lmap₁ res Ψs)
+EffOver : HigherEffects -> HigherEffect
+EffOver Φs Ψs = IFreer (WUnionᵒᵉ (Unionᵉ ∷ Φs) Ψs)
 
-inj′ : ∀ {Ψ A r′ Ψs}
-     -> (p : Ψ ∈ Ψs)
-     -> eff Ψ (res Ψ) A r′
-     -> Union Ψs (lmap₁ res Ψs) A (λ x -> replace₁ p (r′ x) (lmap₁ res Ψs))
-inj′ {Ψs = []}      ()         a
-inj′ {Ψs = Ψ ∷ Ψs} (inj₁ refl) a = inj₁ a
-inj′ {Ψs = Ψ ∷ Ψs} (inj₂ p)    a = inj₂ (inj′ p a)
+inj′ : ∀ {R} {Ψ : Effect R} {r A r′ Rs Ψs} {rs : Resources Rs}
+     -> (p : Ψ , r ∈ Ψs , rs) -> Ψ r A r′ -> Unionᵉ Ψs rs A (λ x -> replace₁ (r′ x) (un∈ʳ p))
+inj′ {Rs = []}     ()                           a
+inj′ {Rs = _ ∷ _} (inj₁ (refl , hrefl , hrefl)) a = inj₁ a
+inj′ {Rs = _ ∷ _} (inj₂  p)                     a = inj₂ (inj′ p a)
 
-inj : ∀ {Ψ A Ψs}
-    -> (p : Ψ ∈ Ψs)
-    -> eff Ψ (res Ψ) A (λ _ -> res Ψ)
-    -> Union Ψs (lmap₁ res Ψs) A (λ _ -> lmap₁ res Ψs)
-inj {Ψs = []}      ()         a
-inj {Ψs = Ψ ∷ Ψs} (inj₁ refl) a = inj₁ a
-inj {Ψs = Ψ ∷ Ψs} (inj₂ p)    a = inj₂ (inj p a)
+inj : ∀ {R} {Ψ : Effect R} {r A Rs Ψs} {rs : Resources Rs}
+    -> (p : Ψ , r ∈ Ψs , rs) -> Ψ r A (const r) -> Unionᵉ Ψs rs A (const rs)
+inj {Rs = []}     ()                           a
+inj {Rs = _ ∷ _} (inj₁ (refl , hrefl , hrefl)) a = inj₁ a
+inj {Rs = _ ∷ _} (inj₂  p)                     a = inj₂ (inj p a)
 
-invoke′ : ∀ {Ψ A r′ Ψs} {{p : Ψ ∈ Ψs}} -> eff Ψ (res Ψ) A r′ -> Eff Ψs A _
-invoke′ {{p}} a = perform (inj′ p a)
+invoke′ : ∀ {Φs R} {Ψ : Effect R} {r A r′ Rs Ψs} {rs : Resources Rs} {{p : Ψ , r ∈ Ψs , rs}}
+        -> Ψ r A r′ -> EffOver Φs Ψs rs A _
+invoke′ {{p}} = liftᶠ ∘ wrapUnionᵒᵉ ∘ inj₁ ∘ inj′ p
 
-invoke : ∀ {Ψ A Ψs} {{p : Ψ ∈ Ψs}} -> eff Ψ (res Ψ) A (λ _ -> res Ψ) -> Eff Ψs A _
-invoke {{p}} a = perform (inj p a)
+invoke : ∀ {Φs R} {Ψ : Effect R} {r A Rs Ψs} {rs : Resources Rs} {{p : Ψ , r ∈ Ψs , rs}}
+       -> Ψ r A (const r) -> EffOver Φs Ψs rs A _
+invoke {{p}} = liftᶠ ∘ wrapUnionᵒᵉ ∘ inj₁ ∘ inj p
+
+invoke₀ : ∀ {Φs R} {Ψ : Effect R} {r A r′ Rs Ψs} {rs : Resources Rs}
+        -> Ψ r A r′ -> EffOver Φs (Ψ , Ψs) (r , rs) A _
+invoke₀ {Ψ = Ψ} = invoke′ {Ψ = Ψ}
+
+Eff : HigherEffect
+Eff = EffOver []

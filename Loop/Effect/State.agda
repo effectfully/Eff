@@ -4,18 +4,21 @@ module Loop.Effect.State where
 
 open import Loop
 
-data AState A : Effectful where
-  Get : AState A A (const A)
-  Put : ∀ {B} -> B -> AState A ⊤ (const B)
+data State A : Effectful where
+  Get : State A A (const A)
+  Put : ∀ {B} -> B -> State A ⊤ (const B)
 
-State : Set -> Effect
-State = the AState
+-- State : Effect
+-- State = the AState
 
-get : ∀ {Ψs A} {{p : State A ∈ Ψs}} -> Eff Ψs A _
-get = invoke Get
+-- get : ∀ {A : Set} {A Rs Ψs} {rs : Resources Rs} {{p : State , A ∈ Ψs , rs}} -> Eff Ψs rs A _
+-- get {{p}} = invoke Get
 
-zap : ∀ {Ψs A B} {{p : State A ∈ Ψs}} -> B -> Eff Ψs ⊤ _
-zap = invoke′ ∘ Put
+-- get : ∀ {Ψ r A Ψs rs} {{p : Ψ # r ∈ rs}} -> Eff Ψs rs A _
+-- get = invoke Get
 
-put : ∀ {Ψs A} {{p : State A ∈ Ψs}} -> A -> Eff Ψs ⊤ _
-put = invoke ∘ Put
+-- zap : ∀ {Ψs A B} {{p : State A ∈ Ψs}} -> B -> Eff Ψs ⊤ _
+-- zap = invoke′ ∘ Put
+
+-- put : ∀ {Ψs A} {{p : State A ∈ Ψs}} -> A -> Eff Ψs ⊤ _
+-- put = invoke ∘ Put
