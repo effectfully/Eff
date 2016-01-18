@@ -83,7 +83,7 @@ Unionᵒᵉ = lfoldr _⊎ᵒᵉ_ (λ _ _ _ _ -> ⊥)
 
 data IFreer {R : Set} (Ψ : Effect R) : Effect R where
   return : ∀ {B r′} y -> IFreer Ψ (r′ y) B r′
-  call   : ∀ {A B r r′ r′′} -> Ψ r A r′ -> (∀ x -> IFreer Ψ (r′ x) B r′′) -> IFreer Ψ r B r′′
+  call   : ∀ {r A r′ B r′′} -> Ψ r A r′ -> (∀ x -> IFreer Ψ (r′ x) B r′′) -> IFreer Ψ r B r′′
 
 liftᶠ : ∀ {R Ψ r A r′} -> Ψ r A r′ -> IFreer {R} Ψ r A r′
 liftᶠ a = call a return

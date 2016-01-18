@@ -28,7 +28,7 @@ execNonDet : ∀ {n β} {αψs : Level ²^ n} {Ψs : Effects αψs} {B : Set β}
 execNonDet {Ψs = Ψs} {B} = execEff (return ∘ [_]) k where
   k : ∀ {A} -> NonDet A -> (A -> Eff Ψs (List B)) -> Eff Ψs (List B)
   k MZero f = return []
-  k MPlus f = _l++_ <$> f lfalse <*> f ltrue
+  k MPlus f = _l++_ <$> f ltrue <*> f lfalse
   
 dguard : ∀ {n α β} {αψs : Level ²^ n} {A : Set α} {Ψs : Effects αψs} {{p : NonDet {β} ∈ Ψs}}
        -> Dec A -> Eff Ψs (⊤ {β})
@@ -60,7 +60,7 @@ interleave b₁ b₂ = rec-msplit (return [> _<>_ <] interleave b₂) b₂ b₁
 
 -- `B' and `C' are in the same universe, because `NonDet' is instantiated to `β'.
 -- Should we consider something like (PolyEffect = ∀ {α} -> Set α -> Set α)?
--- Probably not due to the untypeability of the expression.
+-- Probably not due to the untypeability of this expression.
 {-# TERMINATING #-}
 _>>-_ : ∀ {n β} {αψs : Level ²^ n} {Ψs : Effects αψs} {B C : Set β} {{p : NonDet {β} ∈ Ψs}}
       -> Eff Ψs B -> (B -> Eff Ψs C) -> Eff Ψs C

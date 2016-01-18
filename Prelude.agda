@@ -35,9 +35,9 @@ record ⊤ {α} : Set α where
 ⊥-elim : ∀ {α β} {A : Set α} -> ⊥ {β} -> A
 ⊥-elim ()
 
-_<∨>_ : ∀ {α} {B : Bool -> Set α} -> B false -> B true -> ∀ b -> B b
-(x <∨> y) false = x
-(x <∨> y) true  = y
+_<∨>_ : ∀ {α} {B : Bool -> Set α} -> B true -> B false -> ∀ b -> B b
+(x <∨> y) true  = x
+(x <∨> y) false = y
 
 True : Bool -> Set
 True false = ⊥
