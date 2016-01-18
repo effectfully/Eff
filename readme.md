@@ -1,6 +1,6 @@
 # Eff
 
-Most of the code is about constructing a fully universe polymorphic effect system in Agda. It's unreadable as usual with generic universe polymorphic stuff.
+Most of the code is about constructing a fully universe polymorphic effect system in Agda. It's unreadable as always with generic universe polymorphic stuff.
 
 `Loop.Core` is the most readable version as it enables `--type-in-type`, so I'll describe its content rather than the content of `Resources.Core`, which is properly universe polymorphic and less powerful ("for historical reasons").
 
@@ -52,7 +52,7 @@ Unionᵉ {_ ∷ _} (Ψ , Ψs) (r , rs) A rs′ =        Ψ  r  A (head₁ ∘ rs
                                        ⊎ Unionᵉ Ψs rs A (tail₁ ∘ rs′)
 ```
 
-`Unionᵒᵉ` union a list of higher effects:
+`Unionᵒᵉ` unions a list of higher effects:
 
 ```
 _⊎ᵒᵉ_ : HigherEffect -> HigherEffect -> HigherEffect
@@ -62,7 +62,7 @@ Unionᵒᵉ : HigherEffects -> HigherEffect
 Unionᵒᵉ = lfoldr _⊎ᵒᵉ_ (λ _ _ _ _ -> ⊥)
 ```
 
-Here is the main definition:
+Here is the main definition (`WUnionᵒᵉ` is a dummy wraper over `Unionᵒᵉ` that helps inference):
 
 ```
 EffOver : HigherEffects -> HigherEffect
