@@ -41,13 +41,13 @@ lookupEnv  vz    (ρ ▷ x) = x
 lookupEnv (vs v) (ρ ▷ x) = lookupEnv v ρ
 
 app-arg : Bool -> Type -> Type -> Type
-app-arg b σ τ = if b then σ else σ ⇒ τ
+app-arg b σ τ = if b then σ ⇒ τ else σ
 
 fold-arg : Fin 3 -> Type -> Type
 fold-arg i σ = V.lookup i (σ ⇒ σ ∷ σ ∷ nat ∷ [])
 
 cons-arg : Bool -> Type -> Type
-cons-arg b σ = if b then list σ else σ
+cons-arg b σ = if b then σ else list σ
 
 foldr-arg : Fin 3 -> Type -> Type -> Type
 foldr-arg i σ τ = V.lookup i (σ ⇒ τ ⇒ τ ∷ τ ∷ list σ ∷ [])
@@ -85,6 +85,7 @@ var = invoke₀ ∘ Var
    -> Termᴱ Φs Ψs (Γ ▻ σ) τ _ rs₂ -> Termᴱ Φs Ψs Γ (σ ⇒ τ) rs₁ rs₂
 ƛ b = invoke₀ Lam >> b
 
+-- Both `f' and `x' map the same resources to `rs₂'. This is totally silly.
 _·_ : ∀ {Φs Rs Γ σ τ rs₁ rs₂} {Ψs : Effects Rs}
     -> Termᴱ Φs Ψs Γ (σ ⇒ τ) _ rs₂ -> Termᴱ Φs Ψs Γ σ _ rs₂ -> Termᴱ Φs Ψs Γ τ rs₁ rs₂
 f · x = invoke₀ App >>= f <∨> x

@@ -7,14 +7,11 @@ Most of the code is about constructing a fully universe polymorphic effect syste
 Effects are represented like in the Idris [Effects](https://github.com/edwinb/Eff-dev/blob/master/effects/Effects.idr) library, but resources are values rather than types:
 
 ```
-Effectful : ∀ {R} -> Set
-Effectful {R} = (A : Set) -> (A -> R) -> Set
- 
 Effect : Set -> Set
-Effect R = R -> Effectful {R}
+Effect R = R -> (A : Set) -> (A -> R) -> Set
 ```
 
-Instead of defining `Eff` directly, we define the indexed version of the Oleg Kiselyov's [`Freer`](http://okmij.org/ftp/Haskell/extensible/more.pdf) monad, which is an effect transformer:
+Instead of defining `Eff` directly, we define the indexed version of the Oleg Kiselyov's [`Freer`](http://okmij.org/ftp/Haskell/extensible/more.pdf)) monad, which is an effect transformer:
 
 ```
 data IFreer {R : Set} (Ψ : Effect R) : Effect R where
