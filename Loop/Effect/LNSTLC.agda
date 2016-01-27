@@ -78,9 +78,9 @@ mutual
           -> Term  Ψs rs₁  Γ      (list σ)    rs₃
     Foldr :                                       ∀ {Rs rs₁ rs₂ rs₃ Γ σ τ} {Ψs : Effects Rs}
           -> Termᴱ Ψs rs₃  Γ      (σ ⇒ τ ⇒ τ) rs₃
-          -> Termᴱ Ψs rs₂  Γ       σ          rs₃
-          -> Termᴱ Ψs rs₁  Γ       nat        rs₂
-          -> Term  Ψs rs₁  Γ       σ          rs₃
+          -> Termᴱ Ψs rs₂  Γ       τ          rs₃
+          -> Termᴱ Ψs rs₁  Γ      (list σ)    rs₂
+          -> Term  Ψs rs₁  Γ       τ          rs₃
 
 var : ∀ {Rs rs Γ σ} {Ψs : Effects Rs} -> In σ Γ -> Termᴱ Ψs rs Γ σ rs
 var v = hinvoke (Var v)
