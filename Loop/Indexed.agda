@@ -1,10 +1,10 @@
 {-# OPTIONS --type-in-type #-}
 
-module Loop.Core where
+module Loop.Indexed where
 
 open import Prelude
 
-infix  3 _∈_ _∈₁_ _∈²_
+infix  3 _∈₁_ _∈²_
 infixl 2 _>>=_
 infixr 1 _>>_
 
@@ -21,10 +21,6 @@ head₁ (y , ys) = y
 
 tail₁ : ∀ {A} {B : A -> Set} {x xs} -> List₁ B (x ∷ xs) -> List₁ B xs
 tail₁ (y , ys) = ys
-
-_∈_ : ∀ {A} -> A -> List A -> Set
-y ∈  []      = ⊥
-y ∈ (x ∷ xs) = y ≡ x ⊎ y ∈ xs
 
 data _∈₁_ {A} {B : A -> Set} {x} (y : B x) : ∀ {xs} -> List₁ B xs -> Set where
   here₁  : ∀ {xs} {ys : List₁ B xs} -> y ∈₁ y , ys
@@ -69,19 +65,22 @@ Effects = List₁ Effect
 HigherEffect : Set
 HigherEffect = ∀ {Rs} -> Effects Rs -> Effect (Resources Rs)
 
-HigherEffects : Set
-HigherEffects = List HigherEffect
+IHigherEffect : Set -> Set
+IHigherEffect I = I -> HigherEffect
+
+IHigherEffects : Sets -> Set
+IHigherEffects = List₁ IHigherEffect
+
+toI : HigherEffect -> IHigherEffect ⊤
+toI Ψ tt = Ψ
 
 Unionᵉ : HigherEffect
 Unionᵉ {[]}     tt       tt      A rs′ = ⊥
-Unionᵉ {_ ∷ _} (Ψ , Ψs) (r , rs) A rs′ =        Ψ  r  A (head₁ ∘ rs′)
-                                       ⊎ Unionᵉ Ψs rs A (tail₁ ∘ rs′)
+Unionᵉ {_ ∷ _} (Ψ , Ψs) (r , rs) A rs′ = Ψ r A (head₁ ∘ rs′) ⊎ Unionᵉ Ψs rs A (tail₁ ∘ rs′)
 
-_⊎ʰᵉ_ : HigherEffect -> HigherEffect -> HigherEffect
-(Φ ⊎ʰᵉ Ξ) Ψs rs A rs′ = Φ Ψs rs A rs′ ⊎ Ξ Ψs rs A rs′
-
-Unionʰᵉ : HigherEffects -> HigherEffect
-Unionʰᵉ = lfoldr _⊎ʰᵉ_ (λ _ _ _ _ -> ⊥)
+Unionʰᵉ : ∀ {Is} -> IHigherEffects Is -> IHigherEffect (HList Is)
+Unionʰᵉ {[]}      tt       tt      Ψs rs A rs′ = ⊥
+Unionʰᵉ {I ∷ Is} (Φ , Φs) (i , is) Ψs rs A rs′ = Φ i Ψs rs A rs′ ⊎ Unionʰᵉ Φs is Ψs rs A rs′
 
 --------------------
 
@@ -103,14 +102,14 @@ b >> c = b >>= const c
 
 --------------------
 
-record WUnionʰᵉ {Rs} Φs (Ψs : Effects Rs) rs A rs′ : Set where
+record WUnionʰᵉ {Is Rs} (Φs : IHigherEffects Is) is (Ψs : Effects Rs) rs A rs′ : Set where
   constructor wUnionʰᵉ
-  field unwUnionʰᵉ : Unionʰᵉ Φs Ψs rs A rs′
+  field unwUnionʰᵉ : Unionʰᵉ Φs is Ψs rs A rs′
 
 pattern wcall a f = call (wUnionʰᵉ a) f 
 
-EffOver : HigherEffects -> HigherEffect
-EffOver Φs Ψs = IFreer (WUnionʰᵉ (Unionᵉ ∷ Φs) Ψs)
+EffOver : ∀ {Is} -> IHigherEffects Is -> IHigherEffect (HList Is)
+EffOver Φs is Ψs = IFreer (WUnionʰᵉ (toI Unionᵉ , Φs) (tt , is) Ψs)
 
 inj′ : ∀ {R} {Ψ : Effect R} {r A r′ Rs rs} {Ψs : Effects Rs}
      -> (p : Ψ , r ∈² Ψs , rs) -> Ψ r A r′ -> Unionᵉ Ψs rs A (λ x -> replace₁ (r′ x) (un∈ʳ p))
@@ -124,27 +123,32 @@ inj {Rs = []}     ()
 inj {Rs = _ ∷ _} (inj₁ (refl , hrefl , hrefl)) = inj₁
 inj {Rs = _ ∷ _} (inj₂  p)                     = inj₂ ∘ inj p
 
-invoke′ : ∀ {Φs R} {Ψ : Effect R} {r A r′ Rs rs} {Ψs : Effects Rs} {{p : Ψ , r ∈² Ψs , rs}}
-        -> Ψ r A r′ -> EffOver Φs Ψs rs A _
+invoke′ : ∀ {Is} {Φs : IHigherEffects Is} {is R r A r′ Rs rs}
+            {Ψ : Effect R} {Ψs : Effects Rs} {{p : Ψ , r ∈² Ψs , rs}}
+        -> Ψ r A r′ -> EffOver Φs is Ψs rs A _
 invoke′ {{p}} = liftᶠ ∘ wUnionʰᵉ ∘ inj₁ ∘ inj′ p
 
-invoke : ∀ {Φs R} {Ψ : Effect R} {r A Rs rs} {Ψs : Effects Rs} {{p : Ψ , r ∈² Ψs , rs}}
-       -> Ψ r A (const r) -> EffOver Φs Ψs rs A _
+invoke : ∀ {Is} {Φs : IHigherEffects Is} {is R r A Rs rs}
+           {Ψ : Effect R} {Ψs : Effects Rs} {{p : Ψ , r ∈² Ψs , rs}}
+       -> Ψ r A (const r) -> EffOver Φs is Ψs rs A _
 invoke {{p}} = liftᶠ ∘ wUnionʰᵉ ∘ inj₁ ∘ inj p
 
-invoke₀ : ∀ {Φs R} {Ψ : Effect R} {r A r′ Rs rs} {Ψs : Effects Rs}
-        -> Ψ r A r′ -> EffOver Φs (Ψ , Ψs) (r , rs) A _
-invoke₀ {Φs} {Ψ = Ψ} = invoke′ {Φs} {Ψ = Ψ}
-
-hinj : ∀ {Φs Φ Rs rs A rs′} {Ψs : Effects Rs}
-     -> Φ ∈ Φs -> Φ Ψs rs A rs′ -> Unionʰᵉ Φs Ψs rs A rs′
+hinj : ∀ {Is I} {Φ : IHigherEffect I} {Φs : IHigherEffects Is}
+         {is i Rs rs A rs′} {Ψs : Effects Rs}
+     -> Φ , i ∈² Φs , is -> Φ i Ψs rs A rs′ -> Unionʰᵉ Φs is Ψs rs A rs′
 hinj {[]}      ()
-hinj {Ξ ∷ Φs} (inj₁ refl) = inj₁
-hinj {Ξ ∷ Φs} (inj₂ p)    = inj₂ ∘ hinj p
+hinj {_ ∷ _} (inj₁ (refl , hrefl , hrefl)) = inj₁
+hinj {_ ∷ _} (inj₂  p)                     = inj₂ ∘ hinj p
 
-hinvoke : ∀ {Φs Φ Rs rs A rs′} {Ψs : Effects Rs} {{p : Φ ∈ Φs}}
-        -> Φ Ψs rs A rs′ -> EffOver Φs Ψs rs A rs′
+hinvoke : ∀ {Is I} {Φ : IHigherEffect I} {Φs : IHigherEffects Is}
+            {is i Rs rs A rs′} {Ψs : Effects Rs} {{p : Φ , i ∈² Φs , is}}
+        -> Φ i Ψs rs A rs′ -> EffOver Φs is Ψs rs A rs′
 hinvoke {{p}} = liftᶠ ∘ wUnionʰᵉ ∘ inj₂ ∘ hinj p
 
+hinvoke₀ : ∀ {Is I} {Φ : IHigherEffect I} {Φs : IHigherEffects Is}
+            {is i Rs rs A rs′} {Ψs : Effects Rs}
+         -> Φ i Ψs rs A rs′ -> EffOver (Φ , Φs) (i , is) Ψs rs A rs′
+hinvoke₀ {Φ = Φ} = hinvoke {Φ = Φ}
+
 Eff : HigherEffect
-Eff = EffOver []
+Eff = EffOver tt tt

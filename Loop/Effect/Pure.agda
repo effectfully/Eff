@@ -16,12 +16,12 @@ mutual
 lam : ∀ {Φs Rs A rs₁ rs₂} {B : A -> Set} {Ψs : Effects Rs}
     -> (∀ x -> EffPure Φs Ψs rs₁ (B x) (const rs₂))
     -> EffPure Φs Ψs rs₁ (∀ x -> B x) (const rs₂)
-lam f = call (wrapUnionᵒᵉ (inj₂ (inj₁ (Lam f)))) return
+lam = hinvoke ∘ Lam
 
 open import Loop.Effect.State
 
 test : EffPure [] (State , tt) (⊤ , tt) ((ℕ -> ℕ) -> ℕ -> ℕ) (λ _ -> ℕ , tt)
 test = lam λ f -> zap ⊤ 0 >> lam λ n -> put n >> return (f n)
 
-test₂ : EffPure [] (State , tt) (⊤ , tt) (ℕ -> ℕ) (λ _ -> ⊤ , tt)
-test₂ = test >>= λ f -> zap ℕ tt >> return (f id)
+test₂ : EffPure [] (State , tt) (⊤ , tt) ℕ (λ _ -> ⊤ , tt)
+test₂ = test >>= λ f -> zap ℕ tt >> return (f id 0)
