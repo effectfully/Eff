@@ -5,8 +5,6 @@ module Loop.Effect.ILNSTLC where
 open import Prelude
 open import Loop.Indexed
 
-open import Data.Vec as V using ([]; _∷_)
-
 infixr 6 _⇒_
 infixl 5 _▻_
 infixr 4 vs_
@@ -40,15 +38,15 @@ lookupEnv : ∀ {Γ σ} -> In σ Γ -> Env Γ -> ⟦ σ ⟧
 lookupEnv  vz    (ρ ▷ x) = x
 lookupEnv (vs v) (ρ ▷ x) = lookupEnv v ρ
 
--- `rs₂' should be dependent actually.
 mutual
   Term : ∀ {Rs} -> Effects Rs -> Resources Rs -> Con -> Type -> Resources Rs -> Set
-  Term  Ψs rs₁ Γ σ rs₂ = HTerm (Γ , σ) Ψs rs₁ ⟦ σ ⟧ (const rs₂)
+  Term  Ψs rs₁ Γ σ rs₂ = HTerm Γ Ψs rs₁ ⟦ σ ⟧ (const rs₂)
 
+  -- There is something silly in how contexts are treated.
   Termᴱ : ∀ {Rs} -> Effects Rs -> Resources Rs -> Con -> Type -> Resources Rs -> Set
-  Termᴱ Ψs rs₁ Γ σ rs₂ = EffOver (HTerm , tt) ((Γ , σ) , tt) Ψs rs₁ ⟦ σ ⟧ (const rs₂)
+  Termᴱ Ψs rs₁ Γ σ rs₂ = EffOver (HTerm , tt) (Γ , tt) Ψs rs₁ ⟦ σ ⟧ (const rs₂)
 
-  data HTerm : IHigherEffect (Con × Type) where
+  data HTerm : IHigherEffect Con where
     Pure  : ∀ {Rs rs Γ σ} {Ψs : Effects Rs} -> ⟦ σ ⟧  -> Term Ψs rs Γ σ rs
     Var   : ∀ {Rs rs Γ σ} {Ψs : Effects Rs} -> In σ Γ -> Term Ψs rs Γ σ rs
     Lam   : ∀ {Rs rs₁ rs₂     Γ σ τ} {Ψs : Effects Rs}
@@ -121,8 +119,32 @@ tfoldr : ∀ {Rs rs₁ rs₂ rs₃ Γ σ τ} {Ψs : Effects Rs}
        -> Termᴱ Ψs rs₁  Γ  τ          rs₃
 tfoldr f z xs = hinvoke₀ (Foldr f z xs)
 
+runTermᴱ : ∀ {Γ σ} -> Env Γ -> Termᴱ tt tt Γ σ tt -> ⟦ σ ⟧
+runTermᴱ ρ (return x)                             = x
+runTermᴱ ρ (wcall (inj₁  ())                   k)
+runTermᴱ ρ (wcall (inj₂ (inj₂  ()))            k)
+runTermᴱ ρ (wcall (inj₂ (inj₁ (Pure x)))       k) = runTermᴱ ρ (k  x)
+runTermᴱ ρ (wcall (inj₂ (inj₁ (Var v)))        k) = runTermᴱ ρ (k (lookupEnv v ρ))
+runTermᴱ ρ (wcall (inj₂ (inj₁ (Lam b)))        k) = runTermᴱ ρ (k (λ x -> runTermᴱ (ρ ▷ x) b))
+runTermᴱ ρ (wcall (inj₂ (inj₁ (App f x)))      k) = runTermᴱ ρ (k (runTermᴱ ρ f (runTermᴱ ρ x)))
+runTermᴱ ρ (wcall (inj₂ (inj₁  Z))             k) = runTermᴱ ρ (k  0)
+runTermᴱ ρ (wcall (inj₂ (inj₁ (S n)))          k) = runTermᴱ ρ (k (suc (runTermᴱ ρ n)))
+runTermᴱ ρ (wcall (inj₂ (inj₁ (Fold  f z n)))  k) = runTermᴱ ρ (k (fold   (runTermᴱ ρ z)
+                                                                          (runTermᴱ ρ f)
+                                                                          (runTermᴱ ρ n)))
+runTermᴱ ρ (wcall (inj₂ (inj₁  Nil))           k) = runTermᴱ ρ (k  [])
+runTermᴱ ρ (wcall (inj₂ (inj₁ (Cons x xs)))    k) = runTermᴱ ρ (k (runTermᴱ ρ x ∷ runTermᴱ ρ xs))
+runTermᴱ ρ (wcall (inj₂ (inj₁ (Foldr f z xs))) k) = runTermᴱ ρ (k (lfoldr (runTermᴱ ρ f)
+                                                                          (runTermᴱ ρ z)
+                                                                          (runTermᴱ ρ xs)))
+
+A : Termᴱ tt tt ε ((nat ⇒ nat) ⇒ nat ⇒ nat) tt
+A = ƛ ƛ var (vs vz) · var vz
+
 open import Loop.Effect.IState
 
--- This is awesome.
-test : Termᴱ (State , tt) (⊤ , tt) ε ((nat ⇒ nat) ⇒ nat ⇒ nat) (ℕ , tt)
-test = ƛ ƛ var vz >>= zap ⊤ >> var (vs vz) · get
+test₁ : Termᴱ (State , tt) (⊤ , tt) ε ((nat ⇒ nat) ⇒ nat ⇒ nat) (ℕ , tt)
+test₁ = ƛ ƛ var vz >>= zap ⊤ >> var (vs vz) · get
+
+test₂ : Termᴱ (State , tt) (⊤ , tt) ε ((nat ⇒ nat) ⇒ nat ⇒ nat) (ℕ , tt)
+test₂ = ƛ var vz >>= (λ f -> zap ⊤ (f 0)) >> (ƛ var (vs vz) · get)
