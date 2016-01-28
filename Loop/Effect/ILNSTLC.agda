@@ -40,7 +40,7 @@ lookupEnv (vs v) (ρ ▷ x) = lookupEnv v ρ
 
 mutual
   Term : ∀ {Rs} -> Effects Rs -> Resources Rs -> Con -> Type -> Resources Rs -> Set
-  Term  Ψs rs₁ Γ σ rs₂ = HTerm Γ Ψs rs₁ ⟦ σ ⟧ (const rs₂)
+  Term Ψs rs₁ Γ σ rs₂ = HTerm Γ Ψs rs₁ ⟦ σ ⟧ (const rs₂)
 
   -- There is something silly in how contexts are treated.
   Termᴱ : ∀ {Rs} -> Effects Rs -> Resources Rs -> Con -> Type -> Resources Rs -> Set
@@ -138,10 +138,42 @@ runTermᴱ ρ (wcall (inj₂ (inj₁ (Foldr f z xs))) k) = runTermᴱ ρ (k (lfo
                                                                           (runTermᴱ ρ z)
                                                                           (runTermᴱ ρ xs)))
 
-A : Termᴱ tt tt ε ((nat ⇒ nat) ⇒ nat ⇒ nat) tt
-A = ƛ ƛ var (vs vz) · var vz
+open import Loop.Effect.IPure
+
+{-# TERMINATING #-}
+evalTermᴱ : ∀ {Rs rs₁ rs₂ Γ σ} {Ψs : Effects Rs}
+          -> Env Γ -> Termᴱ Ψs rs₁ Γ σ rs₂ -> Pureᴱ Ψs rs₁ ⟦ σ ⟧ rs₂
+evalTermᴱ ρ (return x)                             = return x
+evalTermᴱ ρ (wcall (inj₁  a)                    k) = wcall (inj₁ a) (evalTermᴱ ρ ∘′ k)
+evalTermᴱ ρ (wcall (inj₂ (inj₂  ()))            k)
+evalTermᴱ ρ (wcall (inj₂ (inj₁ (Pure x)))       k) = evalTermᴱ ρ (k x)
+evalTermᴱ ρ (wcall (inj₂ (inj₁ (Var v)))        k) = evalTermᴱ ρ (k (lookupEnv v ρ))
+evalTermᴱ ρ (wcall (inj₂ (inj₁ (Lam b)))        k) =
+  (lam λ x -> evalTermᴱ (ρ ▷ x) b) >>= evalTermᴱ ρ ∘ k
+evalTermᴱ ρ (wcall (inj₂ (inj₁ (App f x)))      k) =
+  evalTermᴱ ρ f <*> evalTermᴱ ρ x >>= evalTermᴱ ρ ∘ k
+evalTermᴱ ρ (wcall (inj₂ (inj₁  Z))             k) = evalTermᴱ ρ (k 0)
+evalTermᴱ ρ (wcall (inj₂ (inj₁ (S n)))          k) = evalTermᴱ ρ n >>= evalTermᴱ ρ ∘ k ∘ suc
+evalTermᴱ ρ (wcall (inj₂ (inj₁ (Fold  f z n)))  k) =
+  evalTermᴱ ρ n >>= λ nₚ -> fold (evalTermᴱ ρ z)
+                                 (λ x -> flip _$_ <$> x <*> evalTermᴱ ρ f)
+                                  nₚ
+                              >>= evalTermᴱ ρ ∘ k
+evalTermᴱ ρ (wcall (inj₂ (inj₁  Nil))           k) = evalTermᴱ ρ (k [])
+evalTermᴱ ρ (wcall (inj₂ (inj₁ (Cons x xs)))    k) =
+  _∷_ <$> evalTermᴱ ρ x <*> evalTermᴱ ρ xs >>= evalTermᴱ ρ ∘ k
+evalTermᴱ ρ (wcall (inj₂ (inj₁ (Foldr f z xs))) k) =
+  evalTermᴱ ρ xs >>= λ xsₚ -> lfoldr (λ xₚ y -> flip _$_ <$> y <*> ((_$ xₚ) <$> evalTermᴱ ρ f))
+                                     (evalTermᴱ ρ z)
+                                      xsₚ
+                                >>= evalTermᴱ ρ ∘ k
+
+
 
 open import Loop.Effect.IState
+
+A : Termᴱ tt tt ε ((nat ⇒ nat) ⇒ nat ⇒ nat) tt
+A = ƛ ƛ var (vs vz) · var vz
 
 test₁ : Termᴱ (State , tt) (⊤ , tt) ε ((nat ⇒ nat) ⇒ nat ⇒ nat) (ℕ , tt)
 test₁ = ƛ ƛ var vz >>= zap ⊤ >> var (vs vz) · get
