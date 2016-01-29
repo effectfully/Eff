@@ -5,23 +5,25 @@ module Loop.Effect.Pure where
 open import Loop
 
 mutual
-  data Pure Φs : HigherEffect where
-    Lam : ∀ {Rs A rs₁ rs₂} {B : A -> Set} {Ψs : Effects Rs}
-        -> (∀ x -> EffPure Φs Ψs rs₁ (B x) (const rs₂))
-        -> Pure Φs Ψs rs₁ (∀ x -> B x) (const rs₂)
+  Pure : ∀ {Rs} -> Effects Rs -> Resources Rs -> Set -> Resources Rs -> Set
+  Pure Ψs rs₁ A rs₂ = HPure Ψs rs₁ A (const rs₂)
 
-  EffPure : HigherEffects -> HigherEffect
-  EffPure Φs = EffOver (Pure Φs ∷ Φs)
+  Pureᴱ : ∀ {Rs} -> Effects Rs -> Resources Rs -> Set -> Resources Rs -> Set
+  Pureᴱ Ψs rs₁ A rs₂ = EffOver (HPure ∷ []) Ψs rs₁ A (const rs₂)
 
-lam : ∀ {Φs Rs A rs₁ rs₂} {B : A -> Set} {Ψs : Effects Rs}
-    -> (∀ x -> EffPure Φs Ψs rs₁ (B x) (const rs₂))
-    -> EffPure Φs Ψs rs₁ (∀ x -> B x) (const rs₂)
+  data HPure : HigherEffect where
+    Lam : ∀ {Rs rs₁ A rs₂} {B : A -> Set} {Ψs : Effects Rs}
+        -> (∀ x -> Pureᴱ Ψs rs₁ (B x) rs₂) -> Pure Ψs rs₁ (∀ x -> B x) rs₂
+
+lam : ∀ {Rs rs₁ A rs₂} {B : A -> Set} {Ψs : Effects Rs}
+    -> (∀ x -> Pureᴱ Ψs rs₁ (B x) rs₂) -> Pureᴱ Ψs rs₁ (∀ x -> B x) rs₂
 lam = hinvoke ∘ Lam
 
 open import Loop.Effect.State
 
-test : EffPure [] (State , tt) (⊤ , tt) ((ℕ -> ℕ) -> ℕ -> ℕ) (λ _ -> ℕ , tt)
-test = lam λ f -> zap ⊤ 0 >> lam λ n -> put n >> return (f n)
+private
+  test₁ : Pureᴱ (State , tt) (⊤ , tt) ((ℕ -> ℕ) -> ℕ -> ℕ) (ℕ , tt)
+  test₁ = lam λ f -> zap ⊤ 0 >> lam λ n -> put n >> return (f n)
 
-test₂ : EffPure [] (State , tt) (⊤ , tt) ℕ (λ _ -> ⊤ , tt)
-test₂ = test >>= λ f -> zap ℕ tt >> return (f id 0)
+  test₂ : Pureᴱ (State , tt) (⊤ , tt) ℕ (⊤ , tt)
+  test₂ = test₁ >>= λ f -> zap ℕ tt >> return (f id 0)

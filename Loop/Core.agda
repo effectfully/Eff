@@ -7,6 +7,7 @@ open import Prelude
 infix  3 _∈_ _∈₁_ _∈²_
 infixl 2 _>>=_
 infixr 1 _>>_
+infixl 6 _<$>_ _<*>_
 
 List₁ : ∀ {A} (B : A -> Set) -> List A -> Set
 List₁ B  []      = ⊤
@@ -100,6 +101,15 @@ call a f >>= g = call a λ x -> f x >>= g
 _>>_ : ∀ {R Ψ r₁ B r₂ C r′′}
      -> IFreer {R} Ψ r₁ B (const r₂) -> IFreer Ψ r₂ C r′′ -> IFreer Ψ r₁ C r′′
 b >> c = b >>= const c
+
+_<$>_ : ∀ {R Ψ r₁ B r₂ C} -> (B -> C) -> IFreer {R} Ψ r₁ B (const r₂) -> IFreer Ψ r₁ C (const r₂)
+g <$> b = b >>= return ∘ g
+
+_<*>_ : ∀ {R Ψ r₁ B r₂ C r₃}
+      -> IFreer {R} Ψ r₁ (B -> C) (const r₂)
+      -> IFreer {R} Ψ r₂  B       (const r₃)
+      -> IFreer {R} Ψ r₁  C       (const r₃)
+h <*> b = h >>= _<$> b
 
 --------------------
 
