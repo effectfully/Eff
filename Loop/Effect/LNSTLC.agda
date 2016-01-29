@@ -1,8 +1,13 @@
 {-# OPTIONS --type-in-type --no-positivity-check #-}
 
+-- The whole module doesn't make any sense.
+-- The only way to interpret (Termᴱ Ψs rs₁ Γ σ rs₂) where `Ψs' is non-empty
+-- is via the `HBreak' effect (see the `evalTermᴱ' function), which breaks purity.
+-- Still, it's a nice example of why higher-order effects might be useful.
 module Loop.Effect.LNSTLC where
 
 open import Loop
+open import Loop.Effect.Break
 
 infixr 6 _⇒_
 infixl 5 _▻_
@@ -41,6 +46,12 @@ mutual
   Term : ∀ {Rs} -> Effects Rs -> Resources Rs -> Con -> Type -> Resources Rs -> Set
   Term  Ψs rs₁ Γ σ rs₂ = HTerm Γ Ψs rs₁ ⟦ σ ⟧ (const rs₂)
 
+  -- A funny problem: we need to put contexts somewhere, no matter where,
+  -- but they just don't fit anywhere. The current version (`HTerm' is indexed by a context)
+  -- looks restrictive (that claim needs a proof). We could put contexts into resources
+  -- at the cost of introducing a dummy effect, but it looks silly and doesn't solve all problems.
+  -- We could make `EffOver' return contexts, but then it would be impossible to use simple _>>=_
+  -- and other combinators, which is annoying (and I also haven't tried this solution).
   Termᴱ : ∀ {Rs} -> Effects Rs -> Resources Rs -> Con -> Type -> Resources Rs -> Set
   Termᴱ Ψs rs₁ Γ σ rs₂ = EffOver (HTerm Γ ∷ []) Ψs rs₁ ⟦ σ ⟧ (const rs₂)
 
@@ -133,11 +144,9 @@ runTermᴱ ρ (wcall (inj₂ (inj₁ (Foldr f z xs))) k) = runTermᴱ ρ (k (lfo
                                                                           (runTermᴱ ρ z)
                                                                           (runTermᴱ ρ xs)))
 
-open import Loop.Effect.Pure
-
 {-# TERMINATING #-}
 evalTermᴱ : ∀ {Rs rs₁ rs₂ Γ σ} {Ψs : Effects Rs}
-          -> Env Γ -> Termᴱ Ψs rs₁ Γ σ rs₂ -> Pureᴱ Ψs rs₁ ⟦ σ ⟧ rs₂
+          -> Env Γ -> Termᴱ Ψs rs₁ Γ σ rs₂ -> Breakᴱ Ψs rs₁ ⟦ σ ⟧ rs₂
 evalTermᴱ ρ (return x)                             = return x
 evalTermᴱ ρ (wcall (inj₁  a)                    k) = wcall (inj₁ a) (evalTermᴱ ρ ∘′ k)
 evalTermᴱ ρ (wcall (inj₂ (inj₂  ()))            k)
@@ -158,7 +167,7 @@ evalTermᴱ ρ (wcall (inj₂ (inj₁  Nil))           k) = evalTermᴱ ρ (k []
 evalTermᴱ ρ (wcall (inj₂ (inj₁ (Cons x xs)))    k) =
   _∷_ <$> evalTermᴱ ρ x <*> evalTermᴱ ρ xs >>= evalTermᴱ ρ ∘ k
 evalTermᴱ ρ (wcall (inj₂ (inj₁ (Foldr f z xs))) k) =
-  evalTermᴱ ρ xs >>= λ xsₚ -> lfoldr (λ xₚ y -> flip _$_ <$> y <*> ((_$ xₚ) <$> evalTermᴱ ρ f))
+  evalTermᴱ ρ xs >>= λ xsₚ -> lfoldr (λ xₚ y -> (λ yₚ fₚ -> fₚ xₚ yₚ) <$> y <*> evalTermᴱ ρ f)
                                      (evalTermᴱ ρ z)
                                       xsₚ
                                 >>= evalTermᴱ ρ ∘ k
