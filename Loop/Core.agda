@@ -117,7 +117,7 @@ record WUnionʰᵉ {Rs} Φs (Ψs : Effects Rs) rs A rs′ : Set where
   constructor wUnionʰᵉ
   field unwUnionʰᵉ : Unionʰᵉ Φs Ψs rs A rs′
 
-pattern wcall a f = call (wUnionʰᵉ a) f 
+pattern wcall {r′} a f = call {r′ = r′} (wUnionʰᵉ a) f 
 
 EffOver : HigherEffects -> HigherEffect
 EffOver Φs Ψs = IFreer (WUnionʰᵉ (Unionᵉ ∷ Φs) Ψs)

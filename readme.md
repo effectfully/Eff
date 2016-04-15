@@ -1,5 +1,7 @@
 # Eff
 
+**UPDATE** Oops, it seems I over-generalized the `Loop.Core` machinery: there is a problem with `exec*` functions for effects. I'll investigate what's wrong with it, but currently `Loop.Core` doesn't work. Note though that the main part of the development is `Resources.Core` and `Loop.Core` is just an unsound (`--type-in-type` after all) simplification and an experiment with higher effects.
+
 Most of the code is about constructing a fully universe polymorphic effect system in Agda. It's unreadable as always with generic universe polymorphic stuff.
 
 `Loop.Core` is the most readable version as it enables `--type-in-type`, so I'll describe its content rather than the content of `Resources.Core`, which is properly universe polymorphic and less powerful ("for historical reasons").
@@ -11,7 +13,7 @@ Effect : Set -> Set
 Effect R = R -> (A : Set) -> (A -> R) -> Set
 ```
 
-Instead of defining `Eff` directly, we define the indexed version of the Oleg Kiselyov's [`Freer`](http://okmij.org/ftp/Haskell/extensible/more.pdf)) monad, which is an effect transformer:
+Instead of defining `Eff` directly, we define the indexed version of the Oleg Kiselyov's [`Freer`](http://okmij.org/ftp/Haskell/extensible/more.pdf) monad, which is an effect transformer:
 
 ```
 data IFreer {R : Set} (Ψ : Effect R) : Effect R where
@@ -19,7 +21,7 @@ data IFreer {R : Set} (Ψ : Effect R) : Effect R where
   call   : ∀ {r A r′ B r′′} -> Ψ r A r′ -> (∀ x -> IFreer Ψ (r′ x) B r′′) -> IFreer Ψ r B r′′
 ```
 
-As well as `Eff` in Idris it's a Hoare state monad (HST in [Verifying Higher-order Programs with the Dijkstra Monad](http://research.microsoft.com/en-us/um/people/nswamy/papers/dijkstra-submitted-pldi13.pdf) as witnessed by
+As well as `Eff` in Idris it's a Hoare state monad (HST in [Verifying Higher-order Programs with the Dijkstra Monad](http://research.microsoft.com/en-us/um/people/nswamy/papers/dijkstra-submitted-pldi13.pdf)) as witnessed by
 
 ```
 _>>=_ : ∀ {R Ψ r B r′ C r′′}
