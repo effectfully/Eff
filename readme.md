@@ -63,7 +63,7 @@ data Unionʰᵉ : HigherEffects -> HigherEffect where
 Here is the main definition:
 
 ```
-EEffOver : HigherEffects -> HigherEffect
+EffOver : HigherEffects -> HigherEffect
 EffOver Φs Ψs = IFreer (Unionʰᵉ (Unionᵉ ∷ Φs) Ψs)
 ```
 
@@ -78,7 +78,7 @@ Eff = EffOver []
 
 I.e. no higher effects except for the union of simple effects.
 
-So while a computation can't change the set of effects like in in Idris, it can change the resources. A canonical example is the indexed `State`:
+So while a computation can't change the set of effects like in Idris, it can change the resources. A canonical example is the indexed `State`:
 
 ```
 test : Eff (State , tt) (ℕ , tt) ℕ (λ n -> V.Vec Bool n , tt)
