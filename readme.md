@@ -1,7 +1,5 @@
 # Eff
 
-**UPDATE** Oops, it seems I over-generalized the `Loop.Core` machinery: there is a problem with `exec*` functions for effects. I'll investigate what's wrong with it, but currently `Loop.Core` doesn't work. Note though that the main part of the development is `Resources.Core` and `Loop.Core` is just an unsound (`--type-in-type` after all) simplification and an experiment with higher effects.
-
 Most of the code is about constructing a fully universe polymorphic effect system in Agda. It's unreadable as always with generic universe polymorphic stuff.
 
 `Loop.Core` is the most readable version as it enables `--type-in-type`, so I'll describe its content rather than the content of `Resources.Core`, which is properly universe polymorphic and less powerful ("for historical reasons").
@@ -45,27 +43,28 @@ HigherEffect = ∀ {Rs} -> Effects Rs -> Effect (Resources Rs)
 The union of a list of effects is a higher effect:
 
 ```
-Unionᵉ : HigherEffect
-Unionᵉ {[]}     tt       tt      A rs′ = ⊥
-Unionᵉ {_ ∷ _} (Ψ , Ψs) (r , rs) A rs′ =        Ψ  r  A (head₁ ∘ rs′)
-                                       ⊎ Unionᵉ Ψs rs A (tail₁ ∘ rs′)
+data Unionᵉ : HigherEffect where
+  hereᵉ  : ∀ {R Rs r A r′ rs}  {Ψ : Effect R} {Ψs : Effects Rs}
+         -> Ψ r A r′ -> Unionᵉ (Ψ , Ψs) (r , rs) A (λ x -> r′ x , rs)
+  thereᵉ : ∀ {R Rs r A rs rs′} {Ψ : Effect R} {Ψs : Effects Rs}
+         -> Unionᵉ Ψs rs A rs′ -> Unionᵉ (Ψ , Ψs) (r , rs) A (λ x -> r , rs′ x)
 ```
 
-`Unionᵒᵉ` unions a list of higher effects:
+`Unionʰᵉ` unions a list of higher effects:
 
 ```
-_⊎ᵒᵉ_ : HigherEffect -> HigherEffect -> HigherEffect
-(Φ ⊎ᵒᵉ Ξ) Ψs rs A rs′ = Φ Ψs rs A rs′ ⊎ Ξ Ψs rs A rs′
-
-Unionᵒᵉ : HigherEffects -> HigherEffect
-Unionᵒᵉ = lfoldr _⊎ᵒᵉ_ (λ _ _ _ _ -> ⊥)
+data Unionʰᵉ : HigherEffects -> HigherEffect where
+  hereʰᵉ   : ∀ {Φs Rs rs A rs′} {Φ : HigherEffect} {Ψs : Effects Rs}
+           -> Φ {Rs} Ψs rs A rs′ -> Unionʰᵉ (Φ ∷ Φs) Ψs rs A rs′
+  thereʰᵉ  : ∀ {Φs Rs rs A rs′} {Φ : HigherEffect} {Ψs : Effects Rs}
+           -> Unionʰᵉ Φs Ψs rs A rs′ -> Unionʰᵉ (Φ ∷ Φs) Ψs rs A rs′
 ```
 
-Here is the main definition (`WUnionᵒᵉ` is a dummy wraper over `Unionᵒᵉ` that helps inference):
+Here is the main definition:
 
 ```
-EffOver : HigherEffects -> HigherEffect
-EffOver Φs Ψs = IFreer (WUnionᵒᵉ (Unionᵉ ∷ Φs) Ψs)
+EEffOver : HigherEffects -> HigherEffect
+EffOver Φs Ψs = IFreer (Unionʰᵉ (Unionᵉ ∷ Φs) Ψs)
 ```
 
 `EffOver` describes computations over a list of higher effects `Φs` and a list of simple effects `Ψs`.
@@ -82,8 +81,8 @@ I.e. no higher effects except for the union of simple effects.
 So while a computation can't change the set of effects like in in Idris, it can change the resources. A canonical example is the indexed `State`:
 
 ```
-eff : Eff (State , tt) (ℕ , tt) ℕ (λ n -> V.Vec Bool n , tt) _
-eff = get >>= λ n -> put (V.replicate true) >> return n
+test : Eff (State , tt) (ℕ , tt) ℕ (λ n -> V.Vec Bool n , tt)
+test = get >>= λ n -> put (V.replicate true) >> return n
 ```
 
 (`put` is `zap ℕ` actually, because instance search needs an additional hint in this case)
@@ -93,9 +92,8 @@ So we start from `State ℕ` and get `State (Vec Bool n)`, where `n` comes from 
 We can run this computation:
 
 ```
--- 3 , true ∷ true ∷ true ∷ []
-test : ∃ (V.Vec Bool)
-test = runEff $ execState 3 eff
+test-test : runEff (execState 3 test) ≡ (3 , true ∷ true ∷ true ∷ [])
+test-test = refl
 ```
 
 There is also an effectful [tic-tac-toe](https://github.com/effectfully/Eff/blob/master/Examples/Resources/TicTacToe/UnsafeGame.agda) game that [compiles](https://github.com/effectfully/Eff/blob/master/Examples/Resources/TicTacToe/Main.agda).

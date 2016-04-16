@@ -4,6 +4,8 @@
 -- The only way to interpret (Termᴱ Ψs rs₁ Γ σ rs₂) where `Ψs' is non-empty
 -- is via the `HBreak' effect (see the `evalTermᴱ' function), which breaks purity.
 -- Still, it's a nice example of why higher-order effects might be useful.
+
+-- Doesn't type check currently, because `Loop.Core` is under reconstruction.
 module Loop.Effect.LNSTLC where
 
 open import Loop
