@@ -158,3 +158,13 @@ runEff : ∀ {A} -> Eff tt tt A (const tt) -> A
 runEff (return x)            = x
 runEff (call (hereʰᵉ  ()) k)
 runEff (call (thereʰᵉ ()) k)
+
+runEffM : ∀ {Rs rs A rs′} {M : Set -> Set} {Ψs : Effects Rs}
+        -> (∀ {A} -> A -> M A)
+        -> (∀ {A B} -> M A -> (A -> M B) -> M B)
+        -> (∀ {r A r′} -> Unionᵉ Ψs r A r′ -> M A)
+        -> Eff Ψs rs A rs′
+        -> M A
+runEffM ret bind h (return x)            = ret x
+runEffM ret bind h (call (hereʰᵉ  a ) k) = bind (h a) (λ x -> runEffM ret bind h (k x))
+runEffM ret bind h (call (thereʰᵉ ()) k)

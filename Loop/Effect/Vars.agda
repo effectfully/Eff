@@ -35,7 +35,7 @@ f · x = hinvoke (App f x)
 
 evalTermᴱ : ∀ {Rs rs₁ rs₂ Γ A} {Ψs : Effects Rs}
           -> HList Γ -> Termᴱ Ψs rs₁ Γ A rs₂ -> Eff Ψs rs₁ A (const rs₂)
-evalTermᴱ ρ (return x)                         = return x
+evalTermᴱ ρ (return x)                            = return x
 evalTermᴱ ρ (call (hereʰᵉ   a                ) k) = call (hereʰᵉ a) (λ x -> evalTermᴱ ρ (k x))
 evalTermᴱ ρ (call (thereʰᵉ (thereʰᵉ ()      )) k)
 evalTermᴱ ρ (call (thereʰᵉ (hereʰᵉ (Var v  ))) k) = evalTermᴱ ρ (k (hlookup v ρ))
